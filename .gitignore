@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data (raw replays and processed tensors are large)
+data/raw/*.json
+data/raw/*.log
+data/processed/*.parquet
+data/processed/*.bin
+
+# Checkpoints (large model files)
+checkpoints/*.pt
+checkpoints/*.ckpt
+
+# Experiment tracking
+wandb/
+mlruns/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env

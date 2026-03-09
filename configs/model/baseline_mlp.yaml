@@ -1,0 +1,14 @@
+# Simple MLP/GRU Baseline Configuration
+# See IMPLEMENTATION_PLAN.md Phase 3.3.
+
+defaults:
+  - _self_
+
+architecture: mlp            # mlp or gru
+hidden_layers: [512, 256]
+dropout: 0.2
+activation: relu
+
+# GRU-specific (used only if architecture=gru)
+gru_hidden_dim: 256
+gru_num_layers: 1
