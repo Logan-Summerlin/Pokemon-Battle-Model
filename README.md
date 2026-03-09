@@ -11,10 +11,14 @@ This project builds an AI agent that plays Gen 9 OU singles on Pokemon Showdown.
 ## Project Structure
 
 ```
-├── SCOPE.md                    # Frozen scope decisions
-├── EVALUATION_SPEC.md          # Success metrics and evaluation protocol
-├── CHECKPOINT_CONVENTION.md    # Model checkpoint naming scheme
-├── IMPLEMENTATION_PLAN.md      # Full 8-phase build order
+├── docs/                       # Project documentation
+│   ├── SCOPE.md                # Frozen scope decisions
+│   ├── EVALUATION_SPEC.md      # Success metrics and evaluation protocol
+│   ├── CHECKPOINT_CONVENTION.md # Model checkpoint naming scheme
+│   └── IMPLEMENTATION_PLAN.md  # Full 8-phase build order
+├── archive/                    # Historical planning documents
+│   ├── pokemon_model_project_plan.md
+│   └── pokemon_redteam_report.md
 ├── configs/                    # Hydra configuration files
 │   ├── model/                  # Model architecture configs
 │   ├── training/               # Training hyperparameters
@@ -51,4 +55,4 @@ pytest
 
 **Phase 0: Research, Scoping, and Infrastructure** — Complete.
 
-See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for the full roadmap.
+See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for the full roadmap.
