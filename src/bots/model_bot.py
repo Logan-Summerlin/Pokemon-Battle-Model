@@ -191,8 +191,15 @@ class ModelBot(Bot):
         context = torch.from_numpy(tensor_dict["context"]).unsqueeze(0).to(self._device)
         legal_mask = torch.from_numpy(tensor_dict["legal_mask"]).unsqueeze(0).to(self._device)
 
-        # Run model
-        logits = self._model(own_team, opp_team, field, context, legal_mask=legal_mask)
+        # Run model - handle both baseline (returns Tensor) and transformer (returns TransformerOutput)
+        output = self._model(own_team, opp_team, field, context, legal_mask=legal_mask)
+
+        # Extract logits from output
+        if isinstance(output, torch.Tensor):
+            logits = output
+        else:
+            # TransformerOutput or similar
+            logits = output.policy_logits if hasattr(output, "policy_logits") else output
 
         # Select action
         if self._temperature <= 0:
@@ -234,3 +241,46 @@ class ModelBot(Bot):
         if self._games_played == 0:
             return 0.0
         return self._wins / self._games_played
+
+
+def load_transformer_bot(
+    checkpoint_path: str,
+    vocabs_dir: str,
+    device: str = "cpu",
+    temperature: float = 1.0,
+    bot_name: str = "TransformerBot",
+) -> ModelBot:
+    """Load a BattleTransformer model from checkpoint and wrap as a bot.
+
+    Args:
+        checkpoint_path: Path to the .pt checkpoint file
+        vocabs_dir: Path to the vocabularies directory
+        device: Device to run on
+        temperature: Sampling temperature (0 = greedy)
+        bot_name: Name for the bot
+
+    Returns:
+        ModelBot wrapping the loaded transformer.
+    """
+    from src.models.battle_transformer import BattleTransformer, TransformerConfig
+
+    vocabs = BattleVocabularies.load(vocabs_dir)
+    ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
+
+    # Reconstruct config from checkpoint
+    ckpt_config = ckpt.get("config", {})
+    config = TransformerConfig.from_vocabs(vocabs, **{
+        k: v for k, v in ckpt_config.items()
+        if hasattr(TransformerConfig, k)
+    })
+
+    model = BattleTransformer(config)
+    model.load_state_dict(ckpt["model_state_dict"])
+
+    return ModelBot(
+        model=model,
+        vocabs=vocabs,
+        device=device,
+        temperature=temperature,
+        bot_name=bot_name,
+    )
