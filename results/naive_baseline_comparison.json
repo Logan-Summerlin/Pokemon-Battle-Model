@@ -1,0 +1,394 @@
+{
+  "evaluation_info": {
+    "num_battles": 250,
+    "train_battles": 200,
+    "val_battles": 25,
+    "test_battles": 25,
+    "train_turns": 3525,
+    "test_turns": 453,
+    "seed": 42,
+    "timestamp": "2026-03-10 15:12:56 UTC"
+  },
+  "models": {
+    "random_move": {
+      "accuracy": 0.12552971311249547,
+      "top3_accuracy": 0.3655516117436644,
+      "nll": 2.20277675456058,
+      "total_turns": 453,
+      "per_action": {
+        "move 1": {
+          "accuracy": 0.09471924574664296,
+          "count": 73
+        },
+        "move 2": {
+          "accuracy": 0.09683025308025302,
+          "count": 72
+        },
+        "move 3": {
+          "accuracy": 0.09530751235296685,
+          "count": 66
+        },
+        "move 4": {
+          "accuracy": 0.09747618452975589,
+          "count": 56
+        },
+        "move 1 tera": {
+          "accuracy": 0.07905982905982906,
+          "count": 3
+        },
+        "move 2 tera": {
+          "accuracy": 0.08228438228438228,
+          "count": 5
+        },
+        "move 3 tera": {
+          "accuracy": 0.10067340067340068,
+          "count": 3
+        },
+        "move 4 tera": {
+          "accuracy": 0.0914141414141414,
+          "count": 3
+        },
+        "switch 2": {
+          "accuracy": 0.19888765555432214,
+          "count": 45
+        },
+        "switch 3": {
+          "accuracy": 0.18937823872034393,
+          "count": 38
+        },
+        "switch 4": {
+          "accuracy": 0.1837877222492607,
+          "count": 39
+        },
+        "switch 5": {
+          "accuracy": 0.12625039569484017,
+          "count": 27
+        },
+        "switch 6": {
+          "accuracy": 0.14269788182831664,
+          "count": 23
+        }
+      }
+    },
+    "most_common_move": {
+      "accuracy": 0.20750551876379691,
+      "top3_accuracy": 0.6070640176600441,
+      "nll": 1.986185531445872,
+      "total_turns": 453,
+      "per_action": {
+        "move 1": {
+          "accuracy": 0.0,
+          "count": 73
+        },
+        "move 2": {
+          "accuracy": 1.0,
+          "count": 72
+        },
+        "move 3": {
+          "accuracy": 0.0,
+          "count": 66
+        },
+        "move 4": {
+          "accuracy": 0.0,
+          "count": 56
+        },
+        "move 1 tera": {
+          "accuracy": 0.0,
+          "count": 3
+        },
+        "move 2 tera": {
+          "accuracy": 0.0,
+          "count": 5
+        },
+        "move 3 tera": {
+          "accuracy": 0.0,
+          "count": 3
+        },
+        "move 4 tera": {
+          "accuracy": 0.0,
+          "count": 3
+        },
+        "switch 2": {
+          "accuracy": 0.4888888888888889,
+          "count": 45
+        },
+        "switch 3": {
+          "accuracy": 0.0,
+          "count": 38
+        },
+        "switch 4": {
+          "accuracy": 0.0,
+          "count": 39
+        },
+        "switch 5": {
+          "accuracy": 0.0,
+          "count": 27
+        },
+        "switch 6": {
+          "accuracy": 0.0,
+          "count": 23
+        }
+      }
+    },
+    "baseline_mlp": {
+      "accuracy": 0.1986754966887417,
+      "top3_accuracy": 0.6225165562913907,
+      "nll": 1.9460530060016556,
+      "total_turns": 453,
+      "per_action": {
+        "move 1": {
+          "accuracy": 0.4383561643835616,
+          "count": 73
+        },
+        "move 2": {
+          "accuracy": 0.3055555555555556,
+          "count": 72
+        },
+        "move 3": {
+          "accuracy": 0.0,
+          "count": 66
+        },
+        "move 4": {
+          "accuracy": 0.25,
+          "count": 56
+        },
+        "move 1 tera": {
+          "accuracy": 0.0,
+          "count": 3
+        },
+        "move 2 tera": {
+          "accuracy": 0.0,
+          "count": 5
+        },
+        "move 3 tera": {
+          "accuracy": 0.0,
+          "count": 3
+        },
+        "move 4 tera": {
+          "accuracy": 0.0,
+          "count": 3
+        },
+        "switch 2": {
+          "accuracy": 0.1111111111111111,
+          "count": 45
+        },
+        "switch 3": {
+          "accuracy": 0.18421052631578946,
+          "count": 38
+        },
+        "switch 4": {
+          "accuracy": 0.0,
+          "count": 39
+        },
+        "switch 5": {
+          "accuracy": 0.07407407407407407,
+          "count": 27
+        },
+        "switch 6": {
+          "accuracy": 0.34782608695652173,
+          "count": 23
+        }
+      }
+    },
+    "baseline_gru": {
+      "accuracy": 0.2251655629139073,
+      "top3_accuracy": 0.5916114790286976,
+      "nll": 1.9604283347561395,
+      "total_turns": 453,
+      "per_action": {
+        "move 1": {
+          "accuracy": 0.0958904109589041,
+          "count": 73
+        },
+        "move 2": {
+          "accuracy": 0.3472222222222222,
+          "count": 72
+        },
+        "move 3": {
+          "accuracy": 0.15151515151515152,
+          "count": 66
+        },
+        "move 4": {
+          "accuracy": 0.5357142857142857,
+          "count": 56
+        },
+        "move 1 tera": {
+          "accuracy": 0.0,
+          "count": 3
+        },
+        "move 2 tera": {
+          "accuracy": 0.0,
+          "count": 5
+        },
+        "move 3 tera": {
+          "accuracy": 0.0,
+          "count": 3
+        },
+        "move 4 tera": {
+          "accuracy": 0.0,
+          "count": 3
+        },
+        "switch 2": {
+          "accuracy": 0.37777777777777777,
+          "count": 45
+        },
+        "switch 3": {
+          "accuracy": 0.15789473684210525,
+          "count": 38
+        },
+        "switch 4": {
+          "accuracy": 0.0,
+          "count": 39
+        },
+        "switch 5": {
+          "accuracy": 0.037037037037037035,
+          "count": 27
+        },
+        "switch 6": {
+          "accuracy": 0.2608695652173913,
+          "count": 23
+        }
+      }
+    },
+    "phase4_transformer": {
+      "accuracy": 0.1982,
+      "top3_accuracy": 0.5323,
+      "nll": 1.9964,
+      "total_turns": 449,
+      "per_action": {
+        "move1": {
+          "accuracy": 0.6351,
+          "count": 74,
+          "fraction": 0.1648
+        },
+        "move2": {
+          "accuracy": 0.2329,
+          "count": 73,
+          "fraction": 0.1626
+        },
+        "move3": {
+          "accuracy": 0.0794,
+          "count": 63,
+          "fraction": 0.1403
+        },
+        "move4": {
+          "accuracy": 0.0556,
+          "count": 72,
+          "fraction": 0.1604
+        },
+        "tera_move1": {
+          "accuracy": 0.0,
+          "count": 4,
+          "fraction": 0.0089
+        },
+        "tera_move2": {
+          "accuracy": 0.0,
+          "count": 3,
+          "fraction": 0.0067
+        },
+        "tera_move3": {
+          "accuracy": 0.0,
+          "count": 1,
+          "fraction": 0.0022
+        },
+        "switch1": {
+          "accuracy": 0.1714,
+          "count": 35,
+          "fraction": 0.078
+        },
+        "switch2": {
+          "accuracy": 0.2414,
+          "count": 29,
+          "fraction": 0.0646
+        },
+        "switch3": {
+          "accuracy": 0.0556,
+          "count": 36,
+          "fraction": 0.0802
+        },
+        "switch4": {
+          "accuracy": 0.0,
+          "count": 38,
+          "fraction": 0.0846
+        },
+        "switch5": {
+          "accuracy": 0.0476,
+          "count": 21,
+          "fraction": 0.0468
+        }
+      }
+    }
+  },
+  "comparison": {
+    "transformer_vs_random": {
+      "top1_improvement_abs": 0.0727,
+      "top1_improvement_rel": 57.9,
+      "top3_improvement_abs": 0.1667,
+      "nll_improvement": 0.2064
+    },
+    "transformer_vs_most_common": {
+      "top1_improvement_abs": -0.0093,
+      "top1_improvement_rel": -4.5,
+      "top3_improvement_abs": -0.0748,
+      "nll_improvement": -0.0102
+    }
+  },
+  "hardware_estimates": {
+    "scaling_context": {
+      "current_battles": 250,
+      "target_battles": 25000,
+      "scale_factor": 100.0,
+      "current_train_turns": 3775,
+      "estimated_train_turns": 377500,
+      "current_throughput_examples_per_sec": 18.4,
+      "current_total_time_hrs": 0.63,
+      "param_count": 3626107
+    },
+    "cpu_only_estimate": {
+      "description": "Same hardware as current (4-core Xeon, 16GB RAM)",
+      "estimated_time_hrs": 142.5,
+      "feasible_in_5hrs": false,
+      "note": "CPU-only is not feasible for 25K battles. Would take ~100x longer."
+    },
+    "recommended_configs": {
+      "T4 (16GB)": {
+        "throughput_examples_per_sec": 276.0,
+        "estimated_time_hrs": 9.5,
+        "feasible_in_5hrs": false,
+        "recommended_batch_size": 128,
+        "vram_gb": 16,
+        "estimated_cloud_cost": "$4.75",
+        "price_per_hr": "$0.50"
+      },
+      "A10G (24GB)": {
+        "throughput_examples_per_sec": 460.0,
+        "estimated_time_hrs": 5.7,
+        "feasible_in_5hrs": false,
+        "recommended_batch_size": 256,
+        "vram_gb": 24,
+        "estimated_cloud_cost": "$5.70",
+        "price_per_hr": "$1.00"
+      },
+      "A100 (40GB)": {
+        "throughput_examples_per_sec": 920.0,
+        "estimated_time_hrs": 2.8,
+        "feasible_in_5hrs": true,
+        "recommended_batch_size": 512,
+        "vram_gb": 40,
+        "estimated_cloud_cost": "$8.55",
+        "price_per_hr": "$3.00"
+      },
+      "A100 (80GB)": {
+        "throughput_examples_per_sec": 1104.0,
+        "estimated_time_hrs": 2.4,
+        "feasible_in_5hrs": true,
+        "recommended_batch_size": 1024,
+        "vram_gb": 80,
+        "estimated_cloud_cost": "$10.69",
+        "price_per_hr": "$4.50"
+      }
+    },
+    "ram_estimate_gb": 16,
+    "recommendation": "Minimum viable: A100 (40GB) with 16GB RAM. Estimated time: 2.8hrs, cost: $8.55."
+  }
+}
