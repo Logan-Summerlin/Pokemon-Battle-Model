@@ -29,8 +29,12 @@ import logging
 import math
 import os
 import platform
-import resource as resource_mod
 import sys
+
+if sys.platform == "win32":
+    resource_mod = None
+else:
+    import resource as resource_mod
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -119,12 +123,13 @@ def get_resource_snapshot() -> dict:
         snapshot["ram_used_gb"] = 0.0
         snapshot["ram_peak_gb"] = 0.0
 
-    try:
-        ru = resource_mod.getrusage(resource_mod.RUSAGE_SELF)
-        snapshot["cpu_user_time_sec"] = round(ru.ru_utime, 2)
-        snapshot["cpu_sys_time_sec"] = round(ru.ru_stime, 2)
-    except Exception:
-        pass
+    if resource_mod is not None:
+        try:
+            ru = resource_mod.getrusage(resource_mod.RUSAGE_SELF)
+            snapshot["cpu_user_time_sec"] = round(ru.ru_utime, 2)
+            snapshot["cpu_sys_time_sec"] = round(ru.ru_stime, 2)
+        except Exception:
+            pass
 
     if torch.cuda.is_available():
         snapshot["gpu_memory_used_gb"] = round(torch.cuda.memory_allocated() / 1024**3, 3)
