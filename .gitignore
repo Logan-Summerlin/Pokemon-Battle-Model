@@ -20,6 +20,7 @@ env/
 *.swo
 
 # Data (raw replays and processed tensors are large)
+data/raw/*.json
 data/raw/*.json.lz4
 data/raw/*.tar.gz
 data/processed/battles/*.npz

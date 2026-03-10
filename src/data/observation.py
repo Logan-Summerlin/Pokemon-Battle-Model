@@ -303,12 +303,17 @@ class OpponentTracker:
                 self.revealed_moves.setdefault(species, []).append(move_name)
 
         # Reveal item if the opponent has a non-empty, non-unknown item
-        # In Metamon data, item is shown once it's been revealed in battle
-        if opp.item and opp.item.lower() not in ("", "unknown", "none"):
+        # In Metamon data, unrevealed items are "unknownitem"
+        if opp.item and opp.item.lower() not in (
+            "", "unknown", "none", "unknownitem",
+        ):
             self.revealed_items[species] = opp.item
 
         # Reveal ability similarly
-        if opp.ability and opp.ability.lower() not in ("", "unknown", "none"):
+        # In Metamon data, unrevealed abilities are "unknownability"
+        if opp.ability and opp.ability.lower() not in (
+            "", "unknown", "none", "unknownability",
+        ):
             self.revealed_abilities[species] = opp.ability
 
     def get_revealed_moves(self, species: str) -> list[str]:

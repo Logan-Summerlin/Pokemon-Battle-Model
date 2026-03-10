@@ -18,7 +18,7 @@ The plan follows one ruthless decision rule: **maximize expected progress per mo
 |---|---|---|
 | Format | Gen 9 OU singles | Modern, data-rich, strategically relevant, difficult without being maximally pathological |
 | Information regime | Closed team sheet with standard team preview | Preserves real competitive ambiguity while reducing roster uncertainty |
-| Data window | Fixed replay date range (1-2 month snapshot) | Reduces metagame drift during training |
+| Data window | Gen 9 OU era (2022–2026) from Metamon dataset | Full era coverage; narrow later if drift is a problem |
 | Task | In-battle move/switch selection only | Team building is a separate project |
 | Model | Structured candidate-action-scoring transformer | Captures sequence context without paying the generic-LLM tax |
 | Training | Behavior cloning first, then narrow synthetic repair | Establishes baseline before adding complexity |
@@ -49,7 +49,7 @@ Freeze the following in a `SCOPE.md` file committed to the repo:
 - Exact format: Gen 9 OU singles
 - Exact ruleset version (Showdown server tag/commit)
 - Information regime: closed team sheet, standard team preview
-- Replay date window (e.g., January-February 2026)
+- Replay date window (2022–2026, full Gen 9 OU era from Metamon)
 - Minimum Elo threshold for replay inclusion (e.g., 1500+)
 - Explicit list of what is deferred (team building, doubles, search, LLM integration)
 

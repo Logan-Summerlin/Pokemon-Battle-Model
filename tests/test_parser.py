@@ -376,3 +376,90 @@ class TestEdgeCases:
         data = {"states": [state, make_state_dict()], "actions": ["move0", "move1"]}
         battle = load_battle_from_json(data)
         assert len(battle.turns[0].player_active.moves) == 0
+
+
+# ── Tests: Real Metamon format ───────────────────────────────────────────
+
+
+class TestMetamonFormat:
+    """Tests specific to real Metamon dataset format quirks."""
+
+    def test_string_teampreview(self) -> None:
+        """Metamon opponent_teampreview is a list of species strings."""
+        state = make_state_dict(
+            opponent_teampreview=["ogerpon", "dragapult", "kingambit", "rillaboom", "slowbro", "hawlucha"],
+        )
+        data = {"states": [state, make_state_dict()], "actions": [1, 2]}
+        battle = load_battle_from_json(data)
+        tp = battle.turns[0].opponent_teampreview
+        assert len(tp) == 6
+        assert tp[0].name == "ogerpon"
+        assert tp[5].name == "hawlucha"
+
+    def test_mixed_teampreview(self) -> None:
+        """Handle mix of string and dict teampreview entries gracefully."""
+        state = make_state_dict(
+            opponent_teampreview=["ogerpon", make_pokemon_dict("Kingambit")],
+        )
+        data = {"states": [state, make_state_dict()], "actions": [1, 2]}
+        battle = load_battle_from_json(data)
+        tp = battle.turns[0].opponent_teampreview
+        assert len(tp) == 2
+        assert tp[0].name == "ogerpon"
+        assert tp[1].name == "Kingambit"
+
+    def test_integer_actions(self) -> None:
+        """Metamon uses integer action indices."""
+        state1 = make_state_dict()
+        state2 = make_state_dict(battle_won=True)
+        data = {"states": [state1, state2], "actions": [1, -1]}
+        battle = load_battle_from_json(data)
+        assert battle.actions == ["1", "-1"]
+        assert battle.is_valid()
+
+    def test_unrated_elo_filename(self) -> None:
+        """Smogtours battles have 'Unrated' as Elo."""
+        meta = parse_filename_metadata(
+            "smogtours-gen9ou-731515_Unrated_lockon62163_vs_icebeam46118_11-19-2023_LOSS.json.lz4"
+        )
+        assert meta["battle_id"] == "smogtours-gen9ou-731515"
+        assert meta["elo"] == "Unrated"
+        assert meta["result"] == "LOSS"
+
+    def test_unrated_elo_parsed_as_zero(self) -> None:
+        """Unrated Elo should parse to 0, not crash."""
+        state1 = make_state_dict()
+        state2 = make_state_dict()
+        data = {"states": [state1, state2], "actions": [1, 2]}
+        battle = load_battle_from_json(
+            data,
+            filename="smogtours-gen9ou-731515_Unrated_lockon_vs_ice_11-19-2023_LOSS.json.lz4",
+        )
+        assert battle.player_elo == 0
+        assert battle.is_valid()
+
+    def test_metamon_rated_filename(self) -> None:
+        """Standard rated Metamon filename parsing."""
+        meta = parse_filename_metadata(
+            "gen9ou-2011335206_1736_moltres22767_vs_levitate27225_12-14-2023_LOSS.json.lz4"
+        )
+        assert meta["battle_id"] == "gen9ou-2011335206"
+        assert meta["elo"] == "1736"
+        assert meta["player"] == "moltres22767"
+        assert meta["opponent"] == "levitate27225"
+        assert meta["date"] == "12-14-2023"
+        assert meta["result"] == "LOSS"
+
+    def test_unknownitem_and_unknownability(self) -> None:
+        """Metamon marks unrevealed items/abilities as 'unknownitem'/'unknownability'."""
+        opp = make_pokemon_dict("Dragapult", item="unknownitem", ability="unknownability")
+        state = make_state_dict(opponent_active=opp)
+        data = {"states": [state, make_state_dict()], "actions": [1, 2]}
+        battle = load_battle_from_json(data)
+
+        from src.data.observation import OpponentTracker
+        tracker = OpponentTracker()
+        tracker.update_from_turn(battle.turns[0])
+        # unknownitem/unknownability should NOT be treated as reveals
+        assert tracker.get_revealed_item("Dragapult") == "unknown"
+        assert tracker.get_revealed_ability("Dragapult") == "unknown"
