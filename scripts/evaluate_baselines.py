@@ -179,8 +179,21 @@ def evaluate_model(
             np.stack([t["action"] for t in batch_turns]), dtype=torch.long
         ).to(device)
 
+        # For GRU models, add a sequence dimension (treat each turn as length-1 seq)
+        is_gru = isinstance(model, BaselineGRU)
+        if is_gru:
+            own_team = own_team.unsqueeze(1)
+            opp_team = opp_team.unsqueeze(1)
+            field = field.unsqueeze(1)
+            context = context.unsqueeze(1)
+            legal_mask_in = legal_mask.unsqueeze(1)
+        else:
+            legal_mask_in = legal_mask
+
         # Forward
-        logits = model(own_team, opp_team, field, context, legal_mask=legal_mask)
+        logits = model(own_team, opp_team, field, context, legal_mask=legal_mask_in)
+        if is_gru:
+            logits = logits.squeeze(1)  # Remove sequence dim
 
         # Filter valid actions
         valid = actions >= 0

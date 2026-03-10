@@ -329,6 +329,49 @@ class OpponentTracker:
         return self.revealed_tera.get(species, UNKNOWN)
 
 
+def _build_legal_mask(turn: ParsedTurnState) -> list[bool]:
+    """Build a legal action mask from the turn state.
+
+    Uses our canonical action space:
+      0-3: move 1-4, 4-7: tera move 1-4, 8-12: switch to bench 0-4
+    """
+    from src.environment.action_space import NUM_ACTIONS
+
+    mask = [False] * NUM_ACTIONS
+
+    if turn.forced_switch:
+        # Only switch actions are legal during a forced switch
+        num_switches = len(turn.available_switches)
+        for i in range(min(num_switches, 5)):
+            # Filter out fainted pokemon
+            poke = turn.available_switches[i]
+            if poke.hp_pct > 0:
+                mask[8 + i] = True  # SWITCH_2 + i
+    else:
+        # Moves are legal if the active pokemon has them
+        if turn.player_active:
+            num_moves = len(turn.player_active.moves)
+            for i in range(min(num_moves, 4)):
+                if turn.player_active.moves[i].name:
+                    mask[i] = True  # MOVE_1 + i
+                    # Tera versions are legal if can_tera
+                    if turn.can_tera:
+                        mask[4 + i] = True  # MOVE_1_TERA + i
+
+        # Switch actions
+        num_switches = len(turn.available_switches)
+        for i in range(min(num_switches, 5)):
+            poke = turn.available_switches[i]
+            if poke.hp_pct > 0:
+                mask[8 + i] = True  # SWITCH_2 + i
+
+    # Ensure at least one action is legal (fallback)
+    if not any(mask):
+        mask[0] = True
+
+    return mask
+
+
 def build_observations(battle: ParsedBattle) -> list[TurnObservation]:
     """Convert a ParsedBattle into a list of TurnObservations.
 
@@ -429,12 +472,16 @@ def build_observations(battle: ParsedBattle) -> list[TurnObservation]:
         if turn.opponent_prev_move and turn.opponent_prev_move.name:
             prev_opponent_move = turn.opponent_prev_move.name
 
+        # Build legal action mask based on available actions
+        legal_mask = _build_legal_mask(turn)
+
         obs = TurnObservation(
             turn_number=t,
             own_team=own_team_obs[:MAX_TEAM_SIZE],
             opponent_team=opponent_team_obs[:MAX_TEAM_SIZE],
             field=field_obs,
             action_taken=action_taken,
+            legal_action_mask=legal_mask,
             can_tera=turn.can_tera,
             forced_switch=turn.forced_switch,
             opponents_remaining=turn.opponents_remaining,

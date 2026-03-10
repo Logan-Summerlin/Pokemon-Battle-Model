@@ -378,13 +378,25 @@ def tensorize_turn(
     if len(legal_mask) < NUM_ACTIONS:
         legal_mask = np.pad(legal_mask, (0, NUM_ACTIONS - len(legal_mask)))
 
-    # Action taken
+    # Action taken — remap from Metamon encoding to our canonical action space.
+    # Metamon: 0-3 = moves, 4-8 = switches (bench 0-4), 9-12 = tera moves
+    # Ours:    0-3 = moves, 4-7 = tera moves, 8-12 = switches (slot 2-6)
+    _METAMON_TO_CANONICAL = {
+        0: 0, 1: 1, 2: 2, 3: 3,       # moves 1-4 → moves 1-4
+        4: 8, 5: 9, 6: 10, 7: 11, 8: 12,  # switch bench 0-4 → switch 2-6
+        9: 4, 10: 5, 11: 6, 12: 7,     # tera moves 1-4 → tera moves 1-4
+    }
     action_idx = -1
     if obs.action_taken:
-        if build_vocab:
-            action_idx = vocabs.actions.add(obs.action_taken)
-        else:
-            action_idx = vocabs.actions.encode(obs.action_taken)
+        try:
+            parsed = int(obs.action_taken)
+            action_idx = _METAMON_TO_CANONICAL.get(parsed, -1)
+        except ValueError:
+            pass  # Non-integer action string — leave as -1
+
+    # Ensure the target action is always marked legal (if it was taken, it was legal)
+    if 0 <= action_idx < NUM_ACTIONS:
+        legal_mask[action_idx] = 1.0
 
     # Game result
     if obs.game_won is True:

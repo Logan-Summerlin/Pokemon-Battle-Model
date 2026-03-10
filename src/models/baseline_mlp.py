@@ -222,7 +222,14 @@ def masked_cross_entropy(
         masked_logits = masked_logits.reshape(-1, n_act)
         targets = targets.reshape(-1)
 
-    return F.cross_entropy(masked_logits, targets, ignore_index=ignore_index)
+    # Filter out positions where all logits are -inf (fully masked padding)
+    # to avoid NaN losses, in addition to ignore_index filtering.
+    valid = targets != ignore_index
+    if valid.any():
+        return F.cross_entropy(
+            masked_logits[valid], targets[valid], ignore_index=ignore_index
+        )
+    return torch.tensor(0.0, device=logits.device, requires_grad=True)
 
 
 def create_baseline_model(
