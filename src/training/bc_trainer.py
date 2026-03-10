@@ -104,12 +104,15 @@ def collate_sequences(
 
         # Pad sequences to max_len if any tensor has a sequence dimension
         if tensors[0].dim() >= 1 and any(t.shape[0] != max_len for t in tensors):
+            # Use -1 for action padding so ignore_index=-1 filters them out;
+            # use 0 for everything else.
+            pad_value = -1 if key == "action" else 0
             padded = []
             for t in tensors:
                 if t.shape[0] < max_len:
                     pad_shape = list(t.shape)
                     pad_shape[0] = max_len - t.shape[0]
-                    padding = torch.zeros(pad_shape, dtype=t.dtype)
+                    padding = torch.full(pad_shape, pad_value, dtype=t.dtype)
                     t = torch.cat([t, padding], dim=0)
                 padded.append(t[:max_len])
             tensors = padded
