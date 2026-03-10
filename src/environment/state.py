@@ -268,6 +268,9 @@ class BattleState:
     # Request data from server (raw, for current decision)
     _current_request: dict[str, Any] = dc_field(default_factory=dict)
 
+    # Player name to ID mapping (populated from |player| messages)
+    _player_names: dict[str, str] = dc_field(default_factory=dict)  # name -> id
+
     @property
     def own_active(self) -> OwnPokemon | None:
         if 0 <= self.own_active_index < len(self.own_team):
@@ -504,8 +507,16 @@ class BattleStateTracker:
     # ── Message handlers ────────────────────────────────────────────────
 
     def _handle_player(self, msg: BattleMessage) -> None:
-        """Handle |player| message."""
-        pass  # Player identity managed via request
+        """Handle |player| message.
+
+        Format: |player|p1|Username|avatar|rating
+        Stores the username→player_id mapping for winner resolution.
+        """
+        if len(msg.args) >= 2:
+            player_id = msg.args[0].strip()  # "p1" or "p2"
+            username = msg.args[1].strip()
+            if player_id and username:
+                self.state._player_names[username] = player_id
 
     def _handle_poke(self, msg: BattleMessage) -> None:
         """Handle |poke| for team preview."""
@@ -926,8 +937,10 @@ class BattleStateTracker:
         self.state.phase = GamePhase.FINISHED
         if msg.args:
             winner_name = msg.args[0].strip()
-            # Winner name needs to be matched to player id — stored at higher level
-            self.state.winner = winner_name
+            # Resolve the username to a player ID (p1/p2) using the mapping
+            # built from |player| messages.
+            resolved = self.state._player_names.get(winner_name, winner_name)
+            self.state.winner = resolved
 
     def _handle_tie(self, msg: BattleMessage) -> None:
         """Handle |tie| message."""

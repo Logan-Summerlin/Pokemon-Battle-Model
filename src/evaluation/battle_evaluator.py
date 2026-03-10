@@ -162,6 +162,8 @@ class BattleEvaluator:
         # Create two clients (one per player)
         p1_client = ShowdownClient(self.config)
         p2_client = ShowdownClient(self.config)
+        p1_room = ""
+        p2_room = ""
 
         try:
             await p1_client.connect()
@@ -175,19 +177,29 @@ class BattleEvaluator:
 
             # P1 challenges P2
             if p1_team:
-                await p1_client._send_global(f"|/utm {p1_team}")
+                await p1_client._send_global(f"/utm {p1_team}")
             if p2_team:
-                await p2_client._send_global(f"|/utm {p2_team}")
+                await p2_client._send_global(f"/utm {p2_team}")
 
-            # Start the battle
-            challenge_task = asyncio.create_task(
-                p1_client.challenge(p2_name, self.config.format)
+            # Start the battle: send challenge, then accept, then wait for rooms.
+            # Separating send from wait avoids the p1 wait consuming messages
+            # before p2 has accepted.
+            await p1_client._send_global(
+                f"/challenge {p2_name}, {self.config.format}"
             )
-            accept_task = asyncio.create_task(
-                p2_client.accept_challenge(p1_name)
-            )
+            await asyncio.sleep(0.5)
+            await p2_client._send_global(f"/accept {p1_name}")
 
-            p1_room, p2_room = await asyncio.gather(challenge_task, accept_task)
+            # Now wait for both battle rooms to appear
+            p1_room_task = asyncio.create_task(
+                p1_client._wait_for_battle_room(timeout=30)
+            )
+            p2_room_task = asyncio.create_task(
+                p2_client._wait_for_battle_room(timeout=30)
+            )
+            p1_room, p2_room = await asyncio.gather(
+                p1_room_task, p2_room_task
+            )
 
             # Create environments
             p1_env = BattleEnv(p1_client, p1_room, player_id="p1")
@@ -197,9 +209,10 @@ class BattleEvaluator:
             p1_bot.on_battle_start()
             p2_bot.on_battle_start()
 
-            # Play the battle
-            result = await self._play_battle(
-                p1_env, p2_env, p1_bot, p2_bot, game_id
+            # Play the battle (with per-game timeout)
+            result = await asyncio.wait_for(
+                self._play_battle(p1_env, p2_env, p1_bot, p2_bot, game_id),
+                timeout=self.config.battle_timeout,
             )
 
             # Notify bots of result
@@ -223,6 +236,20 @@ class BattleEvaluator:
                 error=str(e),
             )
         finally:
+            # Clean up: forfeit and leave rooms before disconnecting
+            # to prevent stale room data on subsequent connections
+            try:
+                if p1_client.is_connected and p1_room:
+                    await p1_client.forfeit(p1_room)
+                    await p1_client.leave_room(p1_room)
+            except Exception:
+                pass
+            try:
+                if p2_client.is_connected and p2_room:
+                    await p2_client.forfeit(p2_room)
+                    await p2_client.leave_room(p2_room)
+            except Exception:
+                pass
             await p1_client.disconnect()
             await p2_client.disconnect()
 
@@ -241,6 +268,13 @@ class BattleEvaluator:
         p1_obs = await p1_env.reset()
         p2_obs = await p2_env.reset()
 
+        logger.debug(
+            "Game %d reset: P1 legal=%s, P2 legal=%s, P1 done=%s, P2 done=%s",
+            game_id, p1_obs.legal_actions.legal_indices[:3],
+            p2_obs.legal_actions.legal_indices[:3],
+            p1_env.is_done, p2_env.is_done,
+        )
+
         # Handle team preview
         if p1_obs.is_team_preview:
             p1_order = p1_bot.choose_team_order(p1_obs)
@@ -250,6 +284,26 @@ class BattleEvaluator:
             p2_order = p2_bot.choose_team_order(p2_obs)
             p2_obs = await p2_env.step_team_preview(p2_order)
 
+        # If both players have no legal actions right after reset, try
+        # receiving one more update — the request may arrive in a
+        # subsequent WebSocket frame.
+        if not p1_obs.legal_actions.any_legal and not p2_obs.legal_actions.any_legal:
+            if not p1_env.is_done and not p2_env.is_done:
+                try:
+                    p1_r, p2_r = await asyncio.wait_for(
+                        asyncio.gather(
+                            p1_env.wait_for_update(),
+                            p2_env.wait_for_update(),
+                        ),
+                        timeout=10,
+                    )
+                    p1_obs = p1_r.observation
+                    p2_obs = p2_r.observation
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "Game %d: no legal actions after reset retry", game_id,
+                    )
+
         # Main battle loop
         max_turns = 500  # Safety limit
         turn = 0
@@ -257,23 +311,73 @@ class BattleEvaluator:
         while not p1_env.is_done and not p2_env.is_done and turn < max_turns:
             turn += 1
 
-            # Both players choose actions concurrently
-            p1_action = p1_bot.choose_action(p1_obs, p1_obs.legal_actions)
-            p2_action = p2_bot.choose_action(p2_obs, p2_obs.legal_actions)
+            p1_needs_action = p1_obs.legal_actions.any_legal
+            p2_needs_action = p2_obs.legal_actions.any_legal
 
-            # Validate actions
-            if not p1_obs.legal_actions.is_legal(p1_action.canonical_index):
-                legality_violations += 1
-                logger.warning("P1 legality violation in game %d turn %d", game_id, turn)
-            if not p2_obs.legal_actions.is_legal(p2_action.canonical_index):
-                legality_violations += 1
-                logger.warning("P2 legality violation in game %d turn %d", game_id, turn)
+            # If neither player has legal actions, the game has likely ended
+            # but the win message was not processed yet, or both are in a
+            # transient wait state.
+            if not p1_needs_action and not p2_needs_action:
+                # Double-check if the game is actually done
+                if p1_env.is_done or p2_env.is_done:
+                    break
+                # Try to receive one more update in case we missed the end
+                try:
+                    p1_r, p2_r = await asyncio.wait_for(
+                        asyncio.gather(
+                            p1_env.wait_for_update(),
+                            p2_env.wait_for_update(),
+                        ),
+                        timeout=10,
+                    )
+                    p1_obs = p1_r.observation
+                    p2_obs = p2_r.observation
+                    continue
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "Neither player has legal actions in game %d turn %d",
+                        game_id, turn,
+                    )
+                    break
+                except Exception as e:
+                    logger.warning(
+                        "Error waiting for update in game %d turn %d: %s",
+                        game_id, turn, e,
+                    )
+                    break
 
-            # Execute actions
-            p1_result, p2_result = await asyncio.gather(
-                p1_env.step(p1_action),
-                p2_env.step(p2_action),
-            )
+            # Build the coroutine list.  Players with legal actions send a
+            # choice via step(); players in a "wait" state passively receive
+            # the next update via wait_for_update().
+            if p1_needs_action:
+                p1_action = p1_bot.choose_action(p1_obs, p1_obs.legal_actions)
+                if not p1_obs.legal_actions.is_legal(p1_action.canonical_index):
+                    legality_violations += 1
+                    logger.warning("P1 legality violation in game %d turn %d", game_id, turn)
+                p1_coro = p1_env.step(p1_action)
+            else:
+                p1_coro = p1_env.wait_for_update()
+
+            if p2_needs_action:
+                p2_action = p2_bot.choose_action(p2_obs, p2_obs.legal_actions)
+                if not p2_obs.legal_actions.is_legal(p2_action.canonical_index):
+                    legality_violations += 1
+                    logger.warning("P2 legality violation in game %d turn %d", game_id, turn)
+                p2_coro = p2_env.step(p2_action)
+            else:
+                p2_coro = p2_env.wait_for_update()
+
+            # Execute both concurrently with a per-turn timeout
+            try:
+                p1_result, p2_result = await asyncio.wait_for(
+                    asyncio.gather(p1_coro, p2_coro),
+                    timeout=60,
+                )
+            except asyncio.TimeoutError:
+                logger.error(
+                    "Turn timeout in game %d turn %d", game_id, turn,
+                )
+                break
 
             p1_obs = p1_result.observation
             p2_obs = p2_result.observation
@@ -341,6 +445,9 @@ class BattleEvaluator:
             results.append(result)
             if result.error:
                 errors.append(f"Game {i}: {result.error}")
+
+            # Brief pause between games to let the server clean up
+            await asyncio.sleep(0.1)
 
             if (i + 1) % 10 == 0:
                 logger.info(
