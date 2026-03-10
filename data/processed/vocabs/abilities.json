@@ -1,0 +1,24 @@
+{
+  "name": "abilities",
+  "tokens": {
+    "": 0,
+    "unknown": 1,
+    "Levitate": 2,
+    "Quark Drive": 3,
+    "Protosynthesis": 4,
+    "Pressure": 5,
+    "Prankster": 6,
+    "Flash Fire": 7,
+    "Intimidate": 8,
+    "Magic Guard": 9,
+    "Unaware": 10,
+    "Natural Cure": 11,
+    "Beast Boost": 12,
+    "Regenerator": 13,
+    "Sturdy": 14,
+    "Supreme Overlord": 15,
+    "Good as Gold": 16,
+    "Guts": 17
+  },
+  "frozen": true
+}

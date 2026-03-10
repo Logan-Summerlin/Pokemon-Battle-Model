@@ -20,10 +20,11 @@ _Frozen: March 2026 — Changes require explicit versioning and justification._
 
 ## Data Window
 
-**Replay source:** Pokemon Showdown public replay API
-**Date range:** January 1, 2026 — February 28, 2026
+**Replay source:** Metamon parsed replay dataset (jakegrigsby/metamon-parsed-replays on Hugging Face)
+**Date range:** 2022 — 2026 (Gen 9 OU era, covering Scarlet & Violet metagame evolution)
 **Elo threshold:** Both players must be rated 1500+ at the time of the game.
-**Target volume:** 200K–500K battles (start with 200K for prototype, scale to 500K+ for full training).
+**Target volume:** 200K–500K battles (start with 10K random sample for development, scale to full corpus for training).
+**Rationale for expanded window:** The original Jan–Feb 2026 window was too narrow for prototype development. Using the full Gen 9 OU era from Metamon provides a richer, battle-tested dataset. Metagame drift across the window is acceptable at this stage — later phases can filter to narrower windows if needed.
 
 ## Task
 

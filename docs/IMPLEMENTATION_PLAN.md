@@ -121,12 +121,12 @@ Create an `EVALUATION_SPEC.md` with:
 **Duration target: ~2-3 weeks**
 
 ### Step 2.1: Collect replay data
-- Source: Pokemon Showdown replay API or bulk download
-- Target: Gen 9 OU replays only, within the frozen date window
-- Minimum: 200K battles for prototype phase; target 500K-1M for serious training
-- Apply Elo filter: keep only games where both players are above the threshold
-- Store raw logs immutably in a `data/raw/` directory
-- Create a metadata table: `battle_id, date, player1_elo, player2_elo, winner, num_turns`
+- Source: Metamon parsed replay dataset (jakegrigsby/metamon-parsed-replays on Hugging Face)
+- Target: Gen 9 OU replays (gen9ou.tar.gz), date range 2022–2026
+- Prototype: 10K random sample for development; scale to full corpus for training
+- Apply Elo filter: keep only games where player Elo is above the threshold (1500+)
+- Store raw .json.lz4 files immutably in a `data/raw/` directory
+- Create a metadata table: `battle_id, date, player_elo, opponent, winner, num_turns`
 
 ### Step 2.2: Write the replay parser
 - Parse Showdown log format into an event stream:

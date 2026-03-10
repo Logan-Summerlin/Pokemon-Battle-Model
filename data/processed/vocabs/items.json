@@ -1,0 +1,24 @@
+{
+  "name": "items",
+  "tokens": {
+    "": 0,
+    "unknown": 1,
+    "Assault Vest": 2,
+    "Choice Scarf": 3,
+    "Air Balloon": 4,
+    "Life Orb": 5,
+    "Eviolite": 6,
+    "Booster Energy": 7,
+    "Leftovers": 8,
+    "Covert Cloak": 9,
+    "Choice Specs": 10,
+    "Choice Band": 11,
+    "Sitrus Berry": 12,
+    "Black Sludge": 13,
+    "Loaded Dice": 14,
+    "Heavy-Duty Boots": 15,
+    "Focus Sash": 16,
+    "Rocky Helmet": 17
+  },
+  "frozen": true
+}
