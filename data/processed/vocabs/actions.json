@@ -1,0 +1,17 @@
+{
+  "name": "actions",
+  "tokens": {
+    "": 0,
+    "unknown": 1,
+    "switch 2": 2,
+    "move 4": 3,
+    "move 1": 4,
+    "move 3": 5,
+    "switch 1": 6,
+    "move 2": 7,
+    "switch 4": 8,
+    "switch 3": 9,
+    "switch 5": 10
+  },
+  "frozen": true
+}

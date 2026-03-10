@@ -1,0 +1,12 @@
+{
+  "name": "terrain",
+  "tokens": {
+    "": 0,
+    "unknown": 1,
+    "Electric Terrain": 2,
+    "Grassy Terrain": 3,
+    "Misty Terrain": 4,
+    "Psychic Terrain": 5
+  },
+  "frozen": true
+}
