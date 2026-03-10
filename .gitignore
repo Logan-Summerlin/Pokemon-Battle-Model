@@ -31,6 +31,10 @@ data/processed/*.bin
 checkpoints/transformer/
 checkpoints/transformer_smoke/
 checkpoints/transformer_small/
+checkpoints/phase4_250/*.pt
+checkpoints/phase4_smoke/*.pt
+checkpoints/phase4_small/*.pt
+checkpoints/phase4_full/*.pt
 checkpoints/*.ckpt
 
 # Experiment tracking
