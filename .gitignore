@@ -19,11 +19,9 @@ env/
 *.swp
 *.swo
 
-# Data (raw replays are large and can be re-downloaded from HuggingFace)
-data/raw/*.json
-data/raw/*.json.lz4
+# Data - raw replays and processed battles are tracked for reproducibility
+# data/raw/*.json.lz4  -- tracked in git (10K replays from HuggingFace Metamon)
 data/raw/*.tar.gz
-# Processed battles are tracked for reproducibility (10K battles, ~300MB compressed)
 # data/processed/battles/*.npz  -- tracked in git
 data/processed/*.parquet
 data/processed/*.bin
