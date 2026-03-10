@@ -204,6 +204,26 @@ def _parse_pokemon_dict(d: dict[str, Any] | None) -> ParsedPokemon | None:
     )
 
 
+def _parse_teampreview(raw: list[Any]) -> list[ParsedPokemon]:
+    """Parse opponent_teampreview, which may be a list of strings or dicts.
+
+    In the real Metamon dataset, teampreview is a list of species name
+    strings (e.g., ["ogerpon", "dragapult", ...]). In synthetic/test data
+    it may be a list of full pokemon dicts.
+    """
+    result: list[ParsedPokemon] = []
+    for entry in raw:
+        if isinstance(entry, str):
+            # Real Metamon format: just species names
+            if entry:
+                result.append(ParsedPokemon(name=entry))
+        elif isinstance(entry, dict):
+            p = _parse_pokemon_dict(entry)
+            if p is not None:
+                result.append(p)
+    return result
+
+
 def _parse_turn_state(state_dict: dict[str, Any]) -> ParsedTurnState:
     """Parse a single UniversalState dict into a ParsedTurnState."""
     return ParsedTurnState(
@@ -226,11 +246,7 @@ def _parse_turn_state(state_dict: dict[str, Any]) -> ParsedTurnState:
         can_tera=bool(state_dict.get("can_tera", False)),
         battle_won=bool(state_dict.get("battle_won", False)),
         battle_lost=bool(state_dict.get("battle_lost", False)),
-        opponent_teampreview=[
-            p
-            for d in state_dict.get("opponent_teampreview", [])
-            if (p := _parse_pokemon_dict(d)) is not None
-        ],
+        opponent_teampreview=_parse_teampreview(state_dict.get("opponent_teampreview", [])),
     )
 
 
@@ -280,6 +296,14 @@ def parse_filename_metadata(filename: str) -> dict[str, str]:
     return result
 
 
+def _safe_int(value: str | int, default: int = 0) -> int:
+    """Safely convert a value to int, returning default on failure."""
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+
 def load_battle_from_json(data: dict[str, Any], filename: str = "") -> ParsedBattle:
     """Load a ParsedBattle from a Metamon JSON dict.
 
@@ -313,7 +337,7 @@ def load_battle_from_json(data: dict[str, Any], filename: str = "") -> ParsedBat
     return ParsedBattle(
         battle_id=meta.get("battle_id", ""),
         format=fmt,
-        player_elo=int(meta.get("elo", "0") or "0"),
+        player_elo=_safe_int(meta.get("elo", "0")),
         opponent_name=meta.get("opponent", ""),
         date=meta.get("date", ""),
         result=result,

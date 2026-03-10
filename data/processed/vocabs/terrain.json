@@ -3,10 +3,14 @@
   "tokens": {
     "": 0,
     "unknown": 1,
-    "Electric Terrain": 2,
-    "Grassy Terrain": 3,
-    "Misty Terrain": 4,
-    "Psychic Terrain": 5
+    "nofield": 2,
+    "grassyterrain": 3,
+    "trickroom": 4,
+    "electricterrain": 5,
+    "psychicterrain": 6,
+    "gravity": 7,
+    "mistyterrain": 8,
+    "magicroom": 9
   },
   "frozen": true
 }

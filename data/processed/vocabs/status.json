@@ -3,11 +3,14 @@
   "tokens": {
     "": 0,
     "unknown": 1,
-    "par": 2,
-    "slp": 3,
-    "tox": 4,
-    "psn": 5,
-    "brn": 6
+    "nostatus": 2,
+    "brn": 3,
+    "fnt": 4,
+    "par": 5,
+    "psn": 6,
+    "tox": 7,
+    "frz": 8,
+    "slp": 9
   },
   "frozen": true
 }
