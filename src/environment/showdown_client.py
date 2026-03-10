@@ -82,6 +82,7 @@ class ShowdownClient:
         self._connected = False
         self._challstr = ""
         self._username = ""
+        self._raw_buffer: list[str] = []  # Buffer for unconsumed raw messages
 
     @property
     def is_connected(self) -> bool:
@@ -123,18 +124,29 @@ class ShowdownClient:
     async def login(self, username: str) -> None:
         """Log in as a guest user (for local server).
 
-        On a local server, guest login only requires sending the username
-        with the challstr. No password or HTTP assertion needed.
+        On a local server with --no-security, guest login requires sending
+        the /trn command with an empty assertion (no challstr needed).
         """
         self._username = username
 
-        # Wait for challstr from server
+        # Wait for the server to send initial data (including challstr)
+        # even though we won't use the challstr for local no-security login
         if not self._challstr:
             await self._wait_for_challstr()
 
-        # For local server, guest login is just: |/trn username,0,challstr
-        await self._send_global(f"|/trn {username},0,{self._challstr}")
-        logger.info("Logged in as %s", username)
+        # For local server with --no-security: |/trn username,0,
+        # The empty assertion after the comma signals guest login
+        # _send_global prepends "|", so we send just "/trn ..."
+        await self._send_global(f"/trn {username},0,")
+
+        # Wait for the server to confirm the name change
+        deadline = asyncio.get_event_loop().time() + 5.0
+        while asyncio.get_event_loop().time() < deadline:
+            raw = await self._receive_raw(timeout=2.0)
+            if raw and "|updateuser|" in raw:
+                logger.info("Logged in as %s", username)
+                return
+        logger.warning("Login response not confirmed for %s, proceeding anyway", username)
 
     async def _wait_for_challstr(self, timeout: float = 10.0) -> None:
         """Wait for the server to send the challstr."""
@@ -162,8 +174,8 @@ class ShowdownClient:
             The room ID once a battle is found.
         """
         if team:
-            await self._send_global(f"|/utm {team}")
-        await self._send_global(f"|/search {format}")
+            await self._send_global(f"/utm {team}")
+        await self._send_global(f"/search {format}")
         logger.info("Searching for %s battle...", format)
 
         # Wait for battle to be found
@@ -178,8 +190,8 @@ class ShowdownClient:
         Returns the room ID once the challenge is accepted.
         """
         if team:
-            await self._send_global(f"|/utm {team}")
-        await self._send_global(f"|/challenge {opponent}, {format}")
+            await self._send_global(f"/utm {team}")
+        await self._send_global(f"/challenge {opponent}, {format}")
         logger.info("Challenging %s to %s...", opponent, format)
         room_id = await self._wait_for_battle_room()
         return room_id
@@ -190,8 +202,8 @@ class ShowdownClient:
         Returns the room ID.
         """
         if team:
-            await self._send_global(f"|/utm {team}")
-        await self._send_global(f"|/accept {challenger}")
+            await self._send_global(f"/utm {team}")
+        await self._send_global(f"/accept {challenger}")
         room_id = await self._wait_for_battle_room()
         return room_id
 
@@ -233,7 +245,12 @@ class ShowdownClient:
             Tuple of (room_id, parsed_messages). Room ID is empty for global messages.
         """
         timeout = timeout or self.config.message_timeout
-        raw = await self._receive_raw(timeout=timeout)
+
+        # Drain the buffer first (messages stored by _wait_for_battle_room)
+        if self._raw_buffer:
+            raw = self._raw_buffer.pop(0)
+        else:
+            raw = await self._receive_raw(timeout=timeout)
         if raw is None:
             return "", []
 
@@ -318,25 +335,34 @@ class ShowdownClient:
             return None
 
     async def _wait_for_battle_room(self, timeout: float = 30.0) -> str:
-        """Wait for a battle room to be created."""
+        """Wait for a battle room to be created.
+
+        Any received messages that contain battle data are stored in
+        ``_raw_buffer`` so that they are not lost.  The next call to
+        ``receive_messages`` will drain the buffer first.
+        """
         deadline = asyncio.get_event_loop().time() + timeout
         while asyncio.get_event_loop().time() < deadline:
             raw = await self._receive_raw(timeout=1.0)
             if raw is None:
                 continue
             lines = raw.strip().split("\n")
+            room_id = ""
             if lines and lines[0].startswith(">battle-"):
                 room_id = lines[0][1:].strip()
+            else:
+                for line in lines:
+                    if "|init|battle" in line or "|title|" in line:
+                        if lines[0].startswith(">"):
+                            room_id = lines[0][1:].strip()
+                        break
+
+            if room_id:
                 self._rooms[room_id] = BattleRoom(room_id=room_id)
+                # Store the raw message so the battle stream can parse it
+                self._raw_buffer.append(raw)
                 return room_id
-            # Also check for |init|battle
-            for line in lines:
-                if "|init|battle" in line or "|title|" in line:
-                    # Room ID should be on the first line
-                    if lines[0].startswith(">"):
-                        room_id = lines[0][1:].strip()
-                        self._rooms[room_id] = BattleRoom(room_id=room_id)
-                        return room_id
+            # Non-battle messages (PMs, updatesearch) can be discarded
         raise TimeoutError("Battle room not created within timeout")
 
 

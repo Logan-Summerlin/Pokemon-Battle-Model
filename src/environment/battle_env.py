@@ -222,6 +222,38 @@ class BattleEnv:
             raw_request=self.state._current_request,
         )
 
+    async def wait_for_update(self) -> StepResult:
+        """Wait for the next state update without sending an action.
+
+        Used when the player is in a "wait" state (e.g., the opponent is
+        making a forced switch) and we need to receive the next request.
+        """
+        messages = await self._stream.receive_until_request()
+        self._tracker.process_messages(messages)
+
+        reward = 0.0
+        done = self.state.is_finished
+        if done:
+            if self.state.did_we_win is True:
+                reward = 1.0
+            elif self.state.did_we_win is False:
+                reward = -1.0
+
+        new_legal = get_legal_actions(self.state) if not done else ActionMask()
+        obs = Observation(
+            state=self.state.snapshot(),
+            legal_actions=new_legal,
+            turn=self.state.turn,
+            is_team_preview=self.state.phase == GamePhase.TEAM_PREVIEW,
+            raw_request=self.state._current_request,
+        )
+        info: dict[str, Any] = {"waited": True}
+        if done:
+            info["winner"] = self.state.winner
+            info["total_turns"] = self.state.turn
+
+        return StepResult(observation=obs, reward=reward, done=done, info=info)
+
     def get_action_log(self) -> list[dict[str, Any]]:
         """Get the full action log for this battle."""
         return list(self._action_log)
