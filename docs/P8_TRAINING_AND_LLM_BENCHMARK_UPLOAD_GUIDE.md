@@ -31,13 +31,33 @@ The new script `scripts/train_p8_1k.py` automates exactly that configuration by 
 
 ## 2) Prerequisites
 
-From repository root:
+From repository root, use the command block that matches your shell:
+
+Mac/Linux (bash/zsh):
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 ```
+
+Windows PowerShell:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+```
+
+Windows Command Prompt (`cmd.exe`):
+
+```bat
+python -m venv .venv
+.\.venv\Scripts\activate.bat
+pip install -e ".[dev]"
+```
+
+> If you see `'source' is not recognized as an internal or external command`, you are on Windows `cmd.exe`; use either the PowerShell or `cmd` activation command above instead of `source`.
 
 Verify that processed data exists:
 
@@ -82,7 +102,7 @@ Then run `pip install -e ".[dev]"` to ensure project dependencies are consistent
 
 If you are new to Python projects, follow these exact steps slowly:
 
-1. **Open Terminal** (Mac/Linux) or **PowerShell** (Windows).
+1. **Open a shell**: Terminal (Mac/Linux), **PowerShell** (Windows), or **Command Prompt** (Windows).
 2. **Go into this project folder** (the folder where this repository is saved):
 
 ```bash
@@ -107,6 +127,12 @@ Windows PowerShell:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
+```
+
+Windows Command Prompt (`cmd.exe`):
+
+```bat
+.\.venv\Scripts\activate.bat
 ```
 
 5. **Install this project's required Python packages**:
