@@ -38,11 +38,109 @@ pip install -e ".[dev]"
 
 Verify that processed data exists:
 
+Mac/Linux:
+
 ```bash
 test -d data/processed/battles && echo "processed data found"
 ```
 
+Windows PowerShell:
+
+```powershell
+if (Test-Path "data/processed/battles") { Write-Host "processed data found" }
+```
+
 If you need to build processed tensors from raw replays, run the repo data pipeline first (download/parse/process scripts in `scripts/`).
+
+### Windows NVIDIA GPU setup (GTX 1650)
+
+If training logs show `Device: cpu`, PyTorch cannot see CUDA yet. On Windows PowerShell, run:
+
+```powershell
+python -c "import torch; print('torch', torch.__version__); print('cuda available', torch.cuda.is_available()); print('torch cuda build', torch.version.cuda); print('gpu count', torch.cuda.device_count())"
+```
+
+If `cuda available` is `False`, install CUDA-enabled PyTorch wheels pinned to this repo's version range (`torch<2.4`, `torchvision<0.19`):
+
+```powershell
+pip uninstall -y torch torchvision torchaudio
+pip install --index-url https://download.pytorch.org/whl/cu121 torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1
+```
+
+Then run `pip install -e ".[dev]"` to ensure project dependencies are consistent, and verify again with the same `python -c ...` command. If it prints `cuda available True`, rerun the training command and it will use your NVIDIA GPU automatically.
+
+### Super-simple version (for first-time command line users)
+
+If you are new to Python projects, follow these exact steps slowly:
+
+1. **Open Terminal** (Mac/Linux) or **PowerShell** (Windows).
+2. **Go into this project folder** (the folder where this repository is saved):
+
+```bash
+cd /path/to/Pokemon-Battle-Model
+```
+
+3. **Create a project-only Python environment** (this keeps packages isolated):
+
+```bash
+python -m venv .venv
+```
+
+4. **Turn the environment on**:
+
+Mac/Linux:
+
+```bash
+source .venv/bin/activate
+```
+
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+5. **Install this project's required Python packages**:
+
+```bash
+pip install -e ".[dev]"
+```
+
+6. **Check that prepared training data exists**:
+
+Mac/Linux:
+
+```bash
+test -d data/processed/battles && echo "processed data found"
+```
+
+Windows PowerShell:
+
+```powershell
+if (Test-Path "data/processed/battles") { Write-Host "processed data found" }
+```
+
+If you do not see `processed data found`, pause here and prepare data first.
+
+7. **Run a safe test command first** (shows what training would do, but does not train yet):
+
+```bash
+python scripts/train_p8_1k.py --dry-run --seeds 42
+```
+
+8. **Start real training**:
+
+```bash
+python scripts/train_p8_1k.py --num-battles 1000 --seeds 42 --batch-size 32 --epochs 30 --patience 7 --output-root checkpoints/phase4_p8_1k
+```
+
+9. **When training finishes**, your main result file is:
+
+```text
+checkpoints/phase4_p8_1k/p8_benchmark_summary.json
+```
+
+10. **Next time you come back**, open Terminal, `cd` into the repo again, and reactivate the environment before running any Python command.
 
 ---
 

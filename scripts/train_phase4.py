@@ -29,8 +29,12 @@ import logging
 import math
 import os
 import platform
-import resource as resource_mod
 import sys
+
+if sys.platform == "win32":
+    resource_mod = None
+else:
+    import resource as resource_mod
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -95,7 +99,7 @@ def get_system_info() -> dict:
     if torch.cuda.is_available():
         info["gpu_name"] = torch.cuda.get_device_name(0)
         info["gpu_memory_gb"] = round(
-            torch.cuda.get_device_properties(0).total_mem / 1024**3, 2
+            torch.cuda.get_device_properties(0).total_memory / 1024**3, 2
         )
 
     info["python_version"] = sys.version.split()[0]
@@ -119,12 +123,13 @@ def get_resource_snapshot() -> dict:
         snapshot["ram_used_gb"] = 0.0
         snapshot["ram_peak_gb"] = 0.0
 
-    try:
-        ru = resource_mod.getrusage(resource_mod.RUSAGE_SELF)
-        snapshot["cpu_user_time_sec"] = round(ru.ru_utime, 2)
-        snapshot["cpu_sys_time_sec"] = round(ru.ru_stime, 2)
-    except Exception:
-        pass
+    if resource_mod is not None:
+        try:
+            ru = resource_mod.getrusage(resource_mod.RUSAGE_SELF)
+            snapshot["cpu_user_time_sec"] = round(ru.ru_utime, 2)
+            snapshot["cpu_sys_time_sec"] = round(ru.ru_stime, 2)
+        except Exception:
+            pass
 
     if torch.cuda.is_available():
         snapshot["gpu_memory_used_gb"] = round(torch.cuda.memory_allocated() / 1024**3, 3)
@@ -753,6 +758,18 @@ def main() -> None:
     logger.info(f"RAM: {sys_info['ram_total_gb']} GB")
     logger.info(f"GPU: {sys_info['gpu_name']}")
     logger.info(f"PyTorch: {sys_info['pytorch_version']}")
+    logger.info(f"PyTorch CUDA build: {torch.version.cuda or 'None (CPU-only build)'}")
+
+    if device == "cpu":
+        logger.warning(
+            "CUDA is not available. Training will run on CPU. "
+            "On Windows + NVIDIA GPU, install a CUDA-enabled PyTorch build."
+        )
+        logger.warning(
+            "Example: pip uninstall -y torch torchvision torchaudio && "
+            "pip install --index-url https://download.pytorch.org/whl/cu121 "
+            "torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1"
+        )
 
     # Load data
     data_dir = Path(args.data_dir)
