@@ -255,7 +255,7 @@ def evaluate_model(
 
         # Predicted probability of correct action (for ECE)
         correct_probs = probs[range(len(valid_actions)), valid_actions]
-        all_probs.extend(correct_probs.cpu().numpy())
+        all_probs.extend(correct_probs.float().cpu().tolist())
 
         # Per-phase breakdown
         for i in range(len(valid_turns)):

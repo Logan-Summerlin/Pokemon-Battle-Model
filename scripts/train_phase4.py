@@ -628,8 +628,8 @@ def evaluate_on_test(
             probs = F.softmax(logits[valid], dim=-1)
             max_probs = probs.max(dim=-1).values
             is_correct = (preds == targets).float()
-            all_probs.extend(max_probs.cpu().numpy().tolist())
-            all_correct_list.extend(is_correct.cpu().numpy().tolist())
+            all_probs.extend(max_probs.float().cpu().tolist())
+            all_correct_list.extend(is_correct.float().cpu().tolist())
 
     n = max(n_batches, 1)
     ne = max(total_examples, 1)

@@ -609,8 +609,8 @@ def evaluate_test_set(model, test_data, config, device, batch_size=32, max_windo
             probs = F.softmax(logits[valid], dim=-1)
             max_probs = probs.max(dim=-1).values
             is_correct = (preds == targets).float()
-            all_probs.extend(max_probs.cpu().numpy().tolist())
-            all_correct_list.extend(is_correct.cpu().numpy().tolist())
+            all_probs.extend(max_probs.float().cpu().tolist())
+            all_correct_list.extend(is_correct.float().cpu().tolist())
 
             # Entropy of predictions (mask -inf before computing)
             masked_logits = logits[valid].clone()
@@ -618,7 +618,7 @@ def evaluate_test_set(model, test_data, config, device, batch_size=32, max_windo
             safe_probs = F.softmax(masked_logits, dim=-1)
             log_safe = torch.log(safe_probs + 1e-10)
             entropy = -(safe_probs * log_safe).sum(dim=-1)
-            all_entropies.extend(entropy.cpu().numpy().tolist())
+            all_entropies.extend(entropy.float().cpu().tolist())
 
     n = max(n_batches, 1)
     ne = max(total_examples, 1)
