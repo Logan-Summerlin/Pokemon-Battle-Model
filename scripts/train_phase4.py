@@ -805,9 +805,12 @@ def main() -> None:
 
     # Avoid noisy warning on CUDA builds without flash-attention kernels.
     if device == "cuda" and hasattr(torch.backends.cuda, "enable_flash_sdp"):
-        if not torch.backends.cuda.is_flash_attention_available():
+        flash_available = False
+        if hasattr(torch.backends.cuda, "is_flash_attention_available"):
+            flash_available = torch.backends.cuda.is_flash_attention_available()
+        if not flash_available:
             torch.backends.cuda.enable_flash_sdp(False)
-            logger.info("Disabled flash SDP backend (not compiled in this PyTorch build).")
+            logger.info("Disabled flash SDP backend (not available in this PyTorch build).")
 
     amp_dtype: torch.dtype | None = None
     if device == "cuda" and args.amp != "off":
