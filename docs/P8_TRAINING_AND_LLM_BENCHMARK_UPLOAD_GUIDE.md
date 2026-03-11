@@ -52,6 +52,23 @@ if (Test-Path "data/processed/battles") { Write-Host "processed data found" }
 
 If you need to build processed tensors from raw replays, run the repo data pipeline first (download/parse/process scripts in `scripts/`).
 
+### Windows NVIDIA GPU setup (GTX 1650)
+
+If training logs show `Device: cpu`, PyTorch cannot see CUDA yet. On Windows PowerShell, run:
+
+```powershell
+python -c "import torch; print('torch', torch.__version__); print('cuda available', torch.cuda.is_available()); print('torch cuda build', torch.version.cuda); print('gpu count', torch.cuda.device_count())"
+```
+
+If `cuda available` is `False`, install CUDA-enabled PyTorch wheels pinned to this repo's version range (`torch<2.4`, `torchvision<0.19`):
+
+```powershell
+pip uninstall -y torch torchvision torchaudio
+pip install --index-url https://download.pytorch.org/whl/cu121 torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1
+```
+
+Then run `pip install -e ".[dev]"` to ensure project dependencies are consistent, and verify again with the same `python -c ...` command. If it prints `cuda available True`, rerun the training command and it will use your NVIDIA GPU automatically.
+
 ### Super-simple version (for first-time command line users)
 
 If you are new to Python projects, follow these exact steps slowly:
