@@ -30,6 +30,7 @@ import math
 import os
 import platform
 import sys
+from contextlib import nullcontext
 
 if sys.platform == "win32":
     resource_mod = None
@@ -308,6 +309,12 @@ class EpochMetrics:
     cpu_user_time_sec: float = 0.0
 
 
+def _amp_context(amp_dtype: torch.dtype | None):
+    if amp_dtype is None:
+        return nullcontext()
+    return torch.amp.autocast(device_type="cuda", dtype=amp_dtype)
+
+
 def forward_step(
     model: BattleTransformer,
     batch: dict[str, torch.Tensor],
@@ -364,6 +371,8 @@ def forward_step(
 def train_epoch(
     model, loader, optimizer, scheduler, config, device,
     grad_accum=1, max_grad_norm=1.0,
+    amp_dtype: torch.dtype | None = None,
+    scaler: torch.amp.GradScaler | None = None,
 ) -> dict[str, float]:
     """Run one training epoch."""
     model.train()
@@ -374,12 +383,23 @@ def train_epoch(
 
     for batch_idx, batch in enumerate(loader):
         batch = {k: v.to(device) for k, v in batch.items()}
-        loss, loss_dict, logits = forward_step(model, batch, config)
-        (loss / grad_accum).backward()
+        with _amp_context(amp_dtype):
+            loss, loss_dict, logits = forward_step(model, batch, config)
+
+        if scaler is not None:
+            scaler.scale(loss / grad_accum).backward()
+        else:
+            (loss / grad_accum).backward()
 
         if (batch_idx + 1) % grad_accum == 0:
+            if scaler is not None:
+                scaler.unscale_(optimizer)
             nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
-            optimizer.step()
+            if scaler is not None:
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                optimizer.step()
             scheduler.step()
             optimizer.zero_grad()
 
@@ -410,7 +430,7 @@ def train_epoch(
 
 
 @torch.no_grad()
-def validate(model, loader, config, device) -> dict[str, float]:
+def validate(model, loader, config, device, amp_dtype: torch.dtype | None = None) -> dict[str, float]:
     """Run validation."""
     model.eval()
     total_loss = total_policy = total_aux = total_value = 0.0
@@ -420,7 +440,8 @@ def validate(model, loader, config, device) -> dict[str, float]:
 
     for batch in loader:
         batch = {k: v.to(device) for k, v in batch.items()}
-        loss, loss_dict, logits = forward_step(model, batch, config)
+        with _amp_context(amp_dtype):
+            loss, loss_dict, logits = forward_step(model, batch, config)
 
         total_loss += loss_dict.get("total", 0.0)
         total_policy += loss_dict.get("policy", 0.0)
@@ -438,11 +459,12 @@ def validate(model, loader, config, device) -> dict[str, float]:
             total_examples += valid.sum().item()
 
         # Auxiliary accuracy
-        output = model(
-            batch["own_team"], batch["opponent_team"], batch["field"], batch["context"],
-            legal_mask=batch["legal_mask"], seq_len=batch["seq_len"],
-            return_auxiliary=True, return_value=False,
-        )
+        with _amp_context(amp_dtype):
+            output = model(
+                batch["own_team"], batch["opponent_team"], batch["field"], batch["context"],
+                legal_mask=batch["legal_mask"], seq_len=batch["seq_len"],
+                return_auxiliary=True, return_value=False,
+            )
         if isinstance(output, TransformerOutput) and output.auxiliary_preds is not None:
             for head, tgt_key, short in [
                 ("item_logits", "item_targets", "item"),
@@ -560,7 +582,10 @@ def split_data(sequences, train_ratio=0.8, val_ratio=0.1, seed=42):
 
 
 @torch.no_grad()
-def evaluate_on_test(model, test_data, config, device, batch_size=32, max_window=20):
+def evaluate_on_test(
+    model, test_data, config, device, batch_size=32, max_window=20,
+    amp_dtype: torch.dtype | None = None,
+):
     """Full evaluation on test set with per-turn windowed examples."""
     model.eval()
     dataset = WindowedTurnDataset(test_data, max_window=max_window)
@@ -575,7 +600,8 @@ def evaluate_on_test(model, test_data, config, device, batch_size=32, max_window
 
     for batch in loader:
         batch = {k: v.to(device) for k, v in batch.items()}
-        loss, loss_dict, logits = forward_step(model, batch, config)
+        with _amp_context(amp_dtype):
+            loss, loss_dict, logits = forward_step(model, batch, config)
 
         total_loss += loss_dict.get("total", 0.0)
         total_policy += loss_dict.get("policy", 0.0)
@@ -717,6 +743,12 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--checkpoint-dir", type=str, default=None)
     parser.add_argument("--report-path", type=str, default=None)
+    parser.add_argument(
+        "--amp",
+        choices=["off", "fp16", "bf16", "auto"],
+        default="auto",
+        help="Mixed precision mode on CUDA (default: auto picks bf16 if supported, else fp16).",
+    )
     args = parser.parse_args()
 
     # Apply mode presets
@@ -770,6 +802,26 @@ def main() -> None:
             "pip install --index-url https://download.pytorch.org/whl/cu121 "
             "torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1"
         )
+
+    # Avoid noisy warning on CUDA builds without flash-attention kernels.
+    if device == "cuda" and hasattr(torch.backends.cuda, "enable_flash_sdp"):
+        if not torch.backends.cuda.is_flash_attention_available():
+            torch.backends.cuda.enable_flash_sdp(False)
+            logger.info("Disabled flash SDP backend (not compiled in this PyTorch build).")
+
+    amp_dtype: torch.dtype | None = None
+    if device == "cuda" and args.amp != "off":
+        if args.amp == "fp16":
+            amp_dtype = torch.float16
+        elif args.amp == "bf16":
+            amp_dtype = torch.bfloat16
+        else:  # auto
+            bf16_ok = torch.cuda.is_bf16_supported()
+            amp_dtype = torch.bfloat16 if bf16_ok else torch.float16
+
+    scaler = torch.amp.GradScaler("cuda", enabled=(amp_dtype == torch.float16))
+    amp_name = "off" if amp_dtype is None else ("bf16" if amp_dtype == torch.bfloat16 else "fp16")
+    logger.info(f"AMP mode: {amp_name}")
 
     # Load data
     data_dir = Path(args.data_dir)
@@ -831,6 +883,7 @@ def main() -> None:
         "aux_loss_weight": args.aux_weight, "value_loss_weight": args.value_weight,
         "use_value_head": not args.no_value_head,
         "max_window": args.max_window, "device": device, "seed": args.seed,
+        "amp": amp_name,
     }
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr,
@@ -858,8 +911,9 @@ def main() -> None:
     for epoch in range(1, args.epochs + 1):
         epoch_start = time.time()
         train_metrics = train_epoch(model, train_loader, optimizer, scheduler, config, device,
-                                     grad_accum=args.grad_accum)
-        val_metrics = validate(model, val_loader, config, device)
+                                     grad_accum=args.grad_accum,
+                                     amp_dtype=amp_dtype, scaler=scaler)
+        val_metrics = validate(model, val_loader, config, device, amp_dtype=amp_dtype)
         epoch_time = time.time() - epoch_start
         snap = get_resource_snapshot()
         lr = scheduler.get_lr()
@@ -931,7 +985,8 @@ def main() -> None:
     logger.info("=" * 70)
     eval_start = time.time()
     test_results = evaluate_on_test(model, test_seqs, config, device,
-                                     batch_size=args.batch_size, max_window=args.max_window)
+                                     batch_size=args.batch_size, max_window=args.max_window,
+                                     amp_dtype=amp_dtype)
     eval_time = time.time() - eval_start
 
     logger.info(f"Test accuracy: {test_results['test_accuracy']:.4f}")
