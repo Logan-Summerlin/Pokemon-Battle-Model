@@ -815,6 +815,16 @@ def main() -> None:
         default="auto",
         help="Mixed precision mode on CUDA (default: auto picks bf16 if supported, else fp16).",
     )
+    parser.add_argument(
+        "--prune-dead-features",
+        action="store_true",
+        help="Drop known dead input channels (e.g., field binary block, terastallized flag) in embeddings.",
+    )
+    parser.add_argument(
+        "--torch-compile",
+        action="store_true",
+        help="Enable torch.compile(model) for potentially better steady-state throughput.",
+    )
     args = parser.parse_args()
 
     # Apply mode presets
@@ -971,10 +981,15 @@ def main() -> None:
         vocabs, num_layers=args.num_layers, hidden_dim=args.hidden_dim,
         num_heads=args.num_heads, dropout=args.dropout,
         auxiliary_loss_weight=args.aux_weight,
-        use_value_head=not args.no_value_head, value_loss_weight=args.value_weight,
+        use_value_head=not args.no_value_head,
+        value_loss_weight=args.value_weight,
+        prune_dead_features=args.prune_dead_features,
     )
     model = BattleTransformer(config).to(device)
     param_count = model.count_parameters()
+    if args.torch_compile:
+        model = torch.compile(model)
+        logger.info("Enabled torch.compile for model")
     logger.info(f"Model: {config.num_layers}L/{config.hidden_dim}d/{config.num_heads}H, "
                 f"{param_count:,} params")
 
@@ -995,6 +1010,8 @@ def main() -> None:
         "use_value_head": not args.no_value_head,
         "max_window": args.max_window, "device": device, "seed": args.seed,
         "amp": amp_name,
+        "prune_dead_features": args.prune_dead_features,
+        "torch_compile": args.torch_compile,
     }
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr,
