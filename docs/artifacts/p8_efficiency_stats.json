@@ -1,0 +1,77 @@
+{
+  "num_battles": 9957,
+  "total_turn_examples": 190379,
+  "seq_len": {
+    "mean": 19.120116500954104,
+    "p50": 20.0,
+    "p90": 20.0,
+    "p95": 20.0,
+    "max": 20
+  },
+  "fraction_battles_at_or_below_window": {
+    "20": 1.0,
+    "16": 0.10213919855378126,
+    "12": 0.0461986542131164,
+    "10": 0.027819624384854875,
+    "8": 0.011850959124234207
+  },
+  "legal_actions_per_turn": {
+    "mean": 10.344244900960716,
+    "p10": 5.0,
+    "p90": 13.0
+  },
+  "action_mix": {
+    "move_fraction": 0.6414124687367952,
+    "switch_fraction": 0.35858753126320475,
+    "tera_move_fraction": 0.024462387081301464,
+    "raw_counts": [
+      27765,
+      27537,
+      26894,
+      25848,
+      1194,
+      1007,
+      937,
+      1146,
+      15770,
+      14531,
+      13436,
+      11446,
+      7615
+    ]
+  },
+  "sparsity_signals": {
+    "unknown_item_rate": 0.48823049460987467,
+    "unknown_ability_rate": 0.45043001941740773,
+    "unknown_tera_rate": 0.565254483600257,
+    "terastallized_flag_rate": 0.0,
+    "field_binary_nonzero_rate": 0.0
+  },
+  "window_attention_cost_proxy": {
+    "20": {
+      "token_count": 280,
+      "attention_token_sq": 78400,
+      "attention_vs_w20": 1.0
+    },
+    "16": {
+      "token_count": 224,
+      "attention_token_sq": 50176,
+      "attention_vs_w20": 0.64
+    },
+    "12": {
+      "token_count": 168,
+      "attention_token_sq": 28224,
+      "attention_vs_w20": 0.36
+    },
+    "10": {
+      "token_count": 140,
+      "attention_token_sq": 19600,
+      "attention_vs_w20": 0.25
+    },
+    "8": {
+      "token_count": 112,
+      "attention_token_sq": 12544,
+      "attention_vs_w20": 0.16
+    }
+  }
+}
