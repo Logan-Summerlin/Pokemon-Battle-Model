@@ -90,6 +90,9 @@ class TransformerConfig:
     # Sequence
     max_seq_len: int = 50  # Max turns in a battle
 
+    # Efficiency toggles
+    prune_dead_features: bool = False
+
     @classmethod
     def from_yaml(cls, cfg: dict[str, Any]) -> TransformerConfig:
         """Create config from a Hydra/YAML dict."""
@@ -165,6 +168,7 @@ class PokemonEmbedding(nn.Module):
     def __init__(self, config: TransformerConfig) -> None:
         super().__init__()
         c = config
+        self.config = config
 
         # Categorical embeddings
         # Feature layout: [species, move1, move2, move3, move4, item, ability, types, status]
@@ -185,8 +189,11 @@ class PokemonEmbedding(nn.Module):
             + c.status_embedding_dim
         )
 
-        # Continuous + binary features projection
-        cont_binary_dim = POKEMON_CONTINUOUS_DIM + POKEMON_BINARY_DIM  # 14 + 7 = 21
+        # Continuous + binary features projection.
+        # Optional dead-feature pruning drops the always-zero `terastallized` flag.
+        cont_binary_dim = POKEMON_CONTINUOUS_DIM + POKEMON_BINARY_DIM
+        if c.prune_dead_features:
+            cont_binary_dim -= 1
 
         # Project to hidden_dim
         self.proj = nn.Linear(cat_dim + cont_binary_dim, c.hidden_dim)
@@ -216,8 +223,11 @@ class PokemonEmbedding(nn.Module):
 
         cat_emb = torch.cat([species, move1, move2, move3, move4, item, ability, types, status], dim=-1)
 
-        # Continuous + binary features: [9:30]
+        # Continuous + binary features: [9:30], optionally dropping the final
+        # binary channel (terastallized) when dead-feature pruning is enabled.
         cont_binary = pokemon_features[..., POKEMON_CATEGORICAL_DIM:]
+        if self.config.prune_dead_features:
+            cont_binary = cont_binary[..., :-1]
 
         # Combine and project
         combined = torch.cat([cat_emb, cont_binary], dim=-1)
@@ -230,13 +240,17 @@ class FieldEmbedding(nn.Module):
     def __init__(self, config: TransformerConfig) -> None:
         super().__init__()
         c = config
+        self.config = config
 
         # Categorical: weather(0), terrain(1)
         self.weather_emb = nn.Embedding(c.weather_vocab_size, c.weather_embedding_dim, padding_idx=0)
         self.terrain_emb = nn.Embedding(c.terrain_vocab_size, c.terrain_embedding_dim, padding_idx=0)
 
-        # Binary features: 16 side conditions
-        binary_dim = FIELD_FEATURE_DIM - 2  # 16
+        # Binary features: side conditions (often all-zero in processed P8 data).
+        binary_dim = FIELD_FEATURE_DIM - 2
+        self.prune_dead_features = c.prune_dead_features
+        if self.prune_dead_features:
+            binary_dim = 0
 
         total_in = c.weather_embedding_dim + c.terrain_embedding_dim + binary_dim
         self.proj = nn.Linear(total_in, c.hidden_dim)
@@ -253,9 +267,11 @@ class FieldEmbedding(nn.Module):
         cat_indices = field_features[..., :2].long().clamp(min=0)
         weather = self.weather_emb(cat_indices[..., 0])
         terrain = self.terrain_emb(cat_indices[..., 1])
-        binary = field_features[..., 2:]
+        pieces = [weather, terrain]
+        if not self.prune_dead_features:
+            pieces.append(field_features[..., 2:])
 
-        combined = torch.cat([weather, terrain, binary], dim=-1)
+        combined = torch.cat(pieces, dim=-1)
         return self.norm(self.proj(combined))
 
 
@@ -265,6 +281,7 @@ class ContextEmbedding(nn.Module):
     def __init__(self, config: TransformerConfig) -> None:
         super().__init__()
         c = config
+        self.config = config
 
         # Context: turn_num(0), opp_remaining(1), can_tera(2), forced_switch(3),
         #          prev_player_move(4), prev_opponent_move(5)
