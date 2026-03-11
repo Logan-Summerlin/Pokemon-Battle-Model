@@ -45,6 +45,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--warmup-steps", type=int, default=300)
     parser.add_argument("--grad-accum", type=int, default=1)
     parser.add_argument("--dropout", type=float, default=0.1)
+    parser.add_argument("--num-workers", type=int, default=None)
+    parser.add_argument("--prefetch-factor", type=int, default=4)
+    parser.add_argument("--persistent-workers", action="store_true")
+    parser.add_argument("--no-persistent-workers", action="store_true")
+    parser.add_argument("--pin-memory", action="store_true")
+    parser.add_argument("--no-pin-memory", action="store_true")
+    parser.add_argument("--non-blocking-transfer", action="store_true")
+    parser.add_argument("--blocking-transfer", action="store_true")
     parser.add_argument("--output-root", type=str, default="checkpoints/phase4_p8_1k")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without executing")
     return parser.parse_args()
@@ -190,6 +198,22 @@ def main() -> int:
             "--report-path",
             str(report_path),
         ]
+
+        if args.num_workers is not None:
+            cmd.extend(["--num-workers", str(args.num_workers)])
+        cmd.extend(["--prefetch-factor", str(args.prefetch_factor)])
+        if args.persistent_workers:
+            cmd.append("--persistent-workers")
+        if args.no_persistent_workers:
+            cmd.append("--no-persistent-workers")
+        if args.pin_memory:
+            cmd.append("--pin-memory")
+        if args.no_pin_memory:
+            cmd.append("--no-pin-memory")
+        if args.non_blocking_transfer:
+            cmd.append("--non-blocking-transfer")
+        if args.blocking_transfer:
+            cmd.append("--blocking-transfer")
 
         run_command(cmd, dry_run=args.dry_run)
 

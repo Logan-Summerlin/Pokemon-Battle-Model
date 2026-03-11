@@ -373,6 +373,7 @@ def train_epoch(
     grad_accum=1, max_grad_norm=1.0,
     amp_dtype: torch.dtype | None = None,
     scaler: torch.amp.GradScaler | None = None,
+    non_blocking_transfer: bool = False,
 ) -> dict[str, float]:
     """Run one training epoch."""
     model.train()
@@ -382,7 +383,7 @@ def train_epoch(
     optimizer.zero_grad()
 
     for batch_idx, batch in enumerate(loader):
-        batch = {k: v.to(device) for k, v in batch.items()}
+        batch = {k: v.to(device, non_blocking=non_blocking_transfer) for k, v in batch.items()}
         with _amp_context(amp_dtype):
             loss, loss_dict, logits = forward_step(model, batch, config)
 
@@ -430,7 +431,14 @@ def train_epoch(
 
 
 @torch.no_grad()
-def validate(model, loader, config, device, amp_dtype: torch.dtype | None = None) -> dict[str, float]:
+def validate(
+    model,
+    loader,
+    config,
+    device,
+    amp_dtype: torch.dtype | None = None,
+    non_blocking_transfer: bool = False,
+) -> dict[str, float]:
     """Run validation."""
     model.eval()
     total_loss = total_policy = total_aux = total_value = 0.0
@@ -439,7 +447,7 @@ def validate(model, loader, config, device, amp_dtype: torch.dtype | None = None
     aux_total = {"item": 0, "speed": 0, "role": 0}
 
     for batch in loader:
-        batch = {k: v.to(device) for k, v in batch.items()}
+        batch = {k: v.to(device, non_blocking=non_blocking_transfer) for k, v in batch.items()}
         with _amp_context(amp_dtype):
             loss, loss_dict, logits = forward_step(model, batch, config)
 
@@ -585,12 +593,19 @@ def split_data(sequences, train_ratio=0.8, val_ratio=0.1, seed=42):
 def evaluate_on_test(
     model, test_data, config, device, batch_size=32, max_window=20,
     amp_dtype: torch.dtype | None = None,
+    loader_kwargs: dict | None = None,
+    non_blocking_transfer: bool = False,
 ):
     """Full evaluation on test set with per-turn windowed examples."""
     model.eval()
     dataset = WindowedTurnDataset(test_data, max_window=max_window)
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=False,
-                        collate_fn=collate_windowed, num_workers=0)
+    loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        collate_fn=collate_windowed,
+        **(loader_kwargs or {}),
+    )
 
     total_loss = total_policy = total_aux = total_value = 0.0
     total_correct = total_top3 = total_examples = n_batches = 0
@@ -599,7 +614,7 @@ def evaluate_on_test(
     all_probs, all_correct_list = [], []
 
     for batch in loader:
-        batch = {k: v.to(device) for k, v in batch.items()}
+        batch = {k: v.to(device, non_blocking=non_blocking_transfer) for k, v in batch.items()}
         with _amp_context(amp_dtype):
             loss, loss_dict, logits = forward_step(model, batch, config)
 
@@ -744,6 +759,57 @@ def main() -> None:
     parser.add_argument("--checkpoint-dir", type=str, default=None)
     parser.add_argument("--report-path", type=str, default=None)
     parser.add_argument(
+        "--num-workers",
+        type=int,
+        default=None,
+        help="DataLoader worker processes (default: auto, prefers >0 on CUDA).",
+    )
+    parser.add_argument(
+        "--prefetch-factor",
+        type=int,
+        default=4,
+        help="Batches prefetched per worker when num_workers > 0.",
+    )
+    parser.add_argument(
+        "--persistent-workers",
+        dest="persistent_workers",
+        action="store_true",
+        help="Keep DataLoader workers alive across epochs (default: enabled when num_workers > 0).",
+    )
+    parser.add_argument(
+        "--no-persistent-workers",
+        dest="persistent_workers",
+        action="store_false",
+        help="Disable persistent DataLoader workers.",
+    )
+    parser.set_defaults(persistent_workers=None)
+    parser.add_argument(
+        "--pin-memory",
+        dest="pin_memory",
+        action="store_true",
+        help="Use pinned host memory for faster host->GPU transfer (default on CUDA).",
+    )
+    parser.add_argument(
+        "--no-pin-memory",
+        dest="pin_memory",
+        action="store_false",
+        help="Disable pinned host memory in DataLoader.",
+    )
+    parser.set_defaults(pin_memory=None)
+    parser.add_argument(
+        "--non-blocking-transfer",
+        dest="non_blocking_transfer",
+        action="store_true",
+        help="Use non_blocking=True for tensor transfers to GPU (default when pin_memory is enabled).",
+    )
+    parser.add_argument(
+        "--blocking-transfer",
+        dest="non_blocking_transfer",
+        action="store_false",
+        help="Use blocking host->device transfers.",
+    )
+    parser.set_defaults(non_blocking_transfer=None)
+    parser.add_argument(
         "--amp",
         choices=["off", "fp16", "bf16", "auto"],
         default="auto",
@@ -826,6 +892,33 @@ def main() -> None:
     amp_name = "off" if amp_dtype is None else ("bf16" if amp_dtype == torch.bfloat16 else "fp16")
     logger.info(f"AMP mode: {amp_name}")
 
+    cpu_count = os.cpu_count() or 1
+    if args.num_workers is None:
+        args.num_workers = min(8, max(1, cpu_count // 2)) if device == "cuda" else 0
+    if args.pin_memory is None:
+        args.pin_memory = device == "cuda"
+    if args.persistent_workers is None:
+        args.persistent_workers = args.num_workers > 0
+    if args.non_blocking_transfer is None:
+        args.non_blocking_transfer = device == "cuda" and args.pin_memory
+
+    loader_kwargs = {
+        "num_workers": args.num_workers,
+        "pin_memory": args.pin_memory,
+    }
+    if args.num_workers > 0:
+        loader_kwargs["prefetch_factor"] = args.prefetch_factor
+        loader_kwargs["persistent_workers"] = args.persistent_workers
+
+    logger.info(
+        "DataLoader config: num_workers=%d pin_memory=%s prefetch_factor=%s persistent_workers=%s non_blocking_transfer=%s",
+        args.num_workers,
+        args.pin_memory,
+        loader_kwargs.get("prefetch_factor", "n/a"),
+        loader_kwargs.get("persistent_workers", "n/a"),
+        args.non_blocking_transfer,
+    )
+
     # Load data
     data_dir = Path(args.data_dir)
     logger.info(f"Loading data from {data_dir}...")
@@ -858,10 +951,20 @@ def main() -> None:
         "max_window": args.max_window,
     }
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
-                              collate_fn=collate_windowed, num_workers=0)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
-                            collate_fn=collate_windowed, num_workers=0)
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=args.batch_size,
+        shuffle=True,
+        collate_fn=collate_windowed,
+        **loader_kwargs,
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        collate_fn=collate_windowed,
+        **loader_kwargs,
+    )
 
     # Create model
     config = TransformerConfig.from_vocabs(
@@ -883,6 +986,11 @@ def main() -> None:
         "learning_rate": args.lr, "weight_decay": args.weight_decay,
         "warmup_steps": args.warmup_steps, "patience": args.patience,
         "grad_accumulation": args.grad_accum,
+        "num_workers": args.num_workers,
+        "pin_memory": args.pin_memory,
+        "prefetch_factor": loader_kwargs.get("prefetch_factor"),
+        "persistent_workers": loader_kwargs.get("persistent_workers"),
+        "non_blocking_transfer": args.non_blocking_transfer,
         "aux_loss_weight": args.aux_weight, "value_loss_weight": args.value_weight,
         "use_value_head": not args.no_value_head,
         "max_window": args.max_window, "device": device, "seed": args.seed,
@@ -913,10 +1021,26 @@ def main() -> None:
 
     for epoch in range(1, args.epochs + 1):
         epoch_start = time.time()
-        train_metrics = train_epoch(model, train_loader, optimizer, scheduler, config, device,
-                                     grad_accum=args.grad_accum,
-                                     amp_dtype=amp_dtype, scaler=scaler)
-        val_metrics = validate(model, val_loader, config, device, amp_dtype=amp_dtype)
+        train_metrics = train_epoch(
+            model,
+            train_loader,
+            optimizer,
+            scheduler,
+            config,
+            device,
+            grad_accum=args.grad_accum,
+            amp_dtype=amp_dtype,
+            scaler=scaler,
+            non_blocking_transfer=args.non_blocking_transfer,
+        )
+        val_metrics = validate(
+            model,
+            val_loader,
+            config,
+            device,
+            amp_dtype=amp_dtype,
+            non_blocking_transfer=args.non_blocking_transfer,
+        )
         epoch_time = time.time() - epoch_start
         snap = get_resource_snapshot()
         lr = scheduler.get_lr()
@@ -987,9 +1111,17 @@ def main() -> None:
     logger.info("TEST SET EVALUATION")
     logger.info("=" * 70)
     eval_start = time.time()
-    test_results = evaluate_on_test(model, test_seqs, config, device,
-                                     batch_size=args.batch_size, max_window=args.max_window,
-                                     amp_dtype=amp_dtype)
+    test_results = evaluate_on_test(
+        model,
+        test_seqs,
+        config,
+        device,
+        batch_size=args.batch_size,
+        max_window=args.max_window,
+        amp_dtype=amp_dtype,
+        loader_kwargs=loader_kwargs,
+        non_blocking_transfer=args.non_blocking_transfer,
+    )
     eval_time = time.time() - eval_start
 
     logger.info(f"Test accuracy: {test_results['test_accuracy']:.4f}")
