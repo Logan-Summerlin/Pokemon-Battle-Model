@@ -388,7 +388,9 @@ class BattleTransformerEncoder(nn.Module):
             norm_first=True,  # Pre-norm for training stability
         )
         self.transformer = nn.TransformerEncoder(
-            encoder_layer, num_layers=config.num_layers
+            encoder_layer,
+            num_layers=config.num_layers,
+            enable_nested_tensor=False,
         )
 
         self.embed_dropout = nn.Dropout(config.dropout)
