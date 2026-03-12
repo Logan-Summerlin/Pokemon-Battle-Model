@@ -54,6 +54,7 @@ class TransformerConfig:
     num_heads: int = 6
     dropout: float = 0.1
     activation: str = "gelu"
+    ffn_multiplier: int = 4
 
     # Vocabulary sizes (set from actual vocabs)
     species_vocab_size: int = 600
@@ -91,12 +92,13 @@ class TransformerConfig:
     max_seq_len: int = 50  # Max turns in a battle
 
     # Efficiency toggles
-    prune_dead_features: bool = False
+    prune_dead_features: bool = True
 
     @classmethod
     def from_yaml(cls, cfg: dict[str, Any]) -> TransformerConfig:
         """Create config from a Hydra/YAML dict."""
-        return cls(**{k: v for k, v in cfg.items() if hasattr(cls, k)})
+        valid_fields = cls.__dataclass_fields__
+        return cls(**{k: v for k, v in cfg.items() if k in valid_fields})
 
     @classmethod
     def from_vocabs(cls, vocabs: Any, **kwargs: Any) -> TransformerConfig:
@@ -144,6 +146,37 @@ class TransformerConfig:
             )
         return cls(**base)
 
+    @classmethod
+    def p8_lean(cls, vocabs: Any | None = None, **kwargs: Any) -> TransformerConfig:
+        """P8-Lean profile from PARAMETER_REDUCTION_PROPOSAL."""
+        base = dict(
+            num_layers=3,
+            hidden_dim=224,
+            num_heads=4,
+            ffn_multiplier=3,
+            use_value_head=False,
+            prune_dead_features=True,
+            species_embedding_dim=48,
+            move_embedding_dim=24,
+            item_embedding_dim=16,
+            ability_embedding_dim=16,
+            type_embedding_dim=12,
+            max_seq_len=5,
+        )
+        base.update(kwargs)
+        if vocabs is not None:
+            base.update(
+                species_vocab_size=vocabs.species.size,
+                moves_vocab_size=vocabs.moves.size,
+                items_vocab_size=vocabs.items.size,
+                abilities_vocab_size=vocabs.abilities.size,
+                types_vocab_size=vocabs.types.size,
+                status_vocab_size=vocabs.status.size,
+                weather_vocab_size=vocabs.weather.size,
+                terrain_vocab_size=vocabs.terrain.size,
+            )
+        return cls(**base)
+
 
 # ── Token number constants ───────────────────────────────────────────────
 
@@ -165,7 +198,7 @@ class PokemonEmbedding(nn.Module):
     linear projection of continuous/binary features.
     """
 
-    def __init__(self, config: TransformerConfig) -> None:
+    def __init__(self, config: TransformerConfig, move_embedding: nn.Embedding | None = None) -> None:
         super().__init__()
         c = config
         self.config = config
@@ -173,7 +206,7 @@ class PokemonEmbedding(nn.Module):
         # Categorical embeddings
         # Feature layout: [species, move1, move2, move3, move4, item, ability, types, status]
         self.species_emb = nn.Embedding(c.species_vocab_size, c.species_embedding_dim, padding_idx=0)
-        self.move_emb = nn.Embedding(c.moves_vocab_size, c.move_embedding_dim, padding_idx=0)
+        self.move_emb = move_embedding or nn.Embedding(c.moves_vocab_size, c.move_embedding_dim, padding_idx=0)
         self.item_emb = nn.Embedding(c.items_vocab_size, c.item_embedding_dim, padding_idx=0)
         self.ability_emb = nn.Embedding(c.abilities_vocab_size, c.ability_embedding_dim, padding_idx=0)
         self.type_emb = nn.Embedding(c.types_vocab_size, c.type_embedding_dim, padding_idx=0)
@@ -278,14 +311,14 @@ class FieldEmbedding(nn.Module):
 class ContextEmbedding(nn.Module):
     """Converts raw context features into a dense embedding."""
 
-    def __init__(self, config: TransformerConfig) -> None:
+    def __init__(self, config: TransformerConfig, move_embedding: nn.Embedding | None = None) -> None:
         super().__init__()
         c = config
         self.config = config
 
         # Context: turn_num(0), opp_remaining(1), can_tera(2), forced_switch(3),
         #          prev_player_move(4), prev_opponent_move(5)
-        self.prev_move_emb = nn.Embedding(c.moves_vocab_size, c.move_embedding_dim, padding_idx=0)
+        self.prev_move_emb = move_embedding or nn.Embedding(c.moves_vocab_size, c.move_embedding_dim, padding_idx=0)
 
         cont_dim = 4  # turn_num, opp_remaining, can_tera, forced_switch
         total_in = cont_dim + 2 * c.move_embedding_dim
@@ -384,9 +417,10 @@ class BattleTransformerEncoder(nn.Module):
         self.config = config
 
         # Token embeddings
-        self.pokemon_emb = PokemonEmbedding(config)
+        self.shared_move_emb = nn.Embedding(config.moves_vocab_size, config.move_embedding_dim, padding_idx=0)
+        self.pokemon_emb = PokemonEmbedding(config, move_embedding=self.shared_move_emb)
         self.field_emb = FieldEmbedding(config)
-        self.context_emb = ContextEmbedding(config)
+        self.context_emb = ContextEmbedding(config, move_embedding=self.shared_move_emb)
 
         # Positional/type embeddings
         self.token_type_emb = TokenTypeEmbedding(config.hidden_dim)
@@ -398,7 +432,7 @@ class BattleTransformerEncoder(nn.Module):
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=config.hidden_dim,
             nhead=config.num_heads,
-            dim_feedforward=config.hidden_dim * 4,
+            dim_feedforward=config.hidden_dim * config.ffn_multiplier,
             dropout=config.dropout,
             activation=act,
             batch_first=True,
@@ -567,7 +601,7 @@ class AuxiliaryHead(nn.Module):
     - Item class (categorical, top-50)
     - Speed bucket (ordinal, 5 classes)
     - Role archetype (categorical, 8 classes)
-    - Tera category (categorical, 4 classes)
+    - Threat profile (joint speed-bucket x role-archetype)
     - Move family presence (multi-label, 10 families)
     """
 
@@ -580,21 +614,16 @@ class AuxiliaryHead(nn.Module):
             nn.Linear(h, h // 2), nn.GELU(), nn.Dropout(config.dropout),
             nn.Linear(h // 2, config.num_item_classes),
         )
-        self.speed_head = nn.Sequential(
-            nn.Linear(h, h // 2), nn.GELU(), nn.Dropout(config.dropout),
-            nn.Linear(h // 2, config.num_speed_buckets),
-        )
-        self.role_head = nn.Sequential(
-            nn.Linear(h, h // 2), nn.GELU(), nn.Dropout(config.dropout),
-            nn.Linear(h // 2, config.num_role_archetypes),
-        )
-        self.tera_head = nn.Sequential(
-            nn.Linear(h, h // 2), nn.GELU(), nn.Dropout(config.dropout),
-            nn.Linear(h // 2, config.num_tera_categories),
+        threat_classes = config.num_speed_buckets * config.num_role_archetypes
+        self.num_speed_buckets = config.num_speed_buckets
+        self.num_role_archetypes = config.num_role_archetypes
+        self.threat_profile_head = nn.Sequential(
+            nn.Linear(h, h // 4), nn.GELU(), nn.Dropout(config.dropout),
+            nn.Linear(h // 4, threat_classes),
         )
         self.move_family_head = nn.Sequential(
-            nn.Linear(h, h // 2), nn.GELU(), nn.Dropout(config.dropout),
-            nn.Linear(h // 2, config.num_move_families),
+            nn.Linear(h, h // 4), nn.GELU(), nn.Dropout(config.dropout),
+            nn.Linear(h // 4, config.num_move_families),
         )
 
     def forward(
@@ -618,11 +647,14 @@ class AuxiliaryHead(nn.Module):
         # Get opponent slot token embeddings: (batch, 6, hidden_dim)
         opp_tokens = encoder_output[:, start:end]
 
+        threat_flat = self.threat_profile_head(opp_tokens)
+        threat_joint = threat_flat.view(*threat_flat.shape[:2], self.num_speed_buckets, self.num_role_archetypes)
+
         return {
             "item_logits": self.item_head(opp_tokens),        # (batch, 6, num_item_classes)
-            "speed_logits": self.speed_head(opp_tokens),       # (batch, 6, num_speed_buckets)
-            "role_logits": self.role_head(opp_tokens),         # (batch, 6, num_role_archetypes)
-            "tera_logits": self.tera_head(opp_tokens),         # (batch, 6, num_tera_categories)
+            "speed_logits": torch.logsumexp(threat_joint, dim=-1),  # (batch, 6, num_speed_buckets)
+            "role_logits": torch.logsumexp(threat_joint, dim=-2),   # (batch, 6, num_role_archetypes)
+            "threat_profile_logits": threat_flat,
             "move_family_logits": self.move_family_head(opp_tokens),  # (batch, 6, num_move_families)
         }
 
