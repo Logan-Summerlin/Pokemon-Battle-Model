@@ -19,6 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field as dc_field
 from typing import Any
 
+from src.data.base_stats import lookup_base_stats
 from src.data.replay_parser import ParsedBattle, ParsedPokemon, ParsedTurnState
 from src.environment.action_space import NUM_ACTIONS
 
@@ -189,12 +190,20 @@ def _pokemon_to_opponent_observation(
     Hidden Information Doctrine: we only include what has been revealed.
     The Metamon dataset provides the opponent's actual info, so we must
     carefully filter to only revealed information.
+
+    Base stats are PUBLIC knowledge — once a species is visible (switched in),
+    any player can look up its base stats. This is not hidden information.
     """
     if poke is None:
         return PokemonObservation(is_own=False)
 
+    species = poke.name or poke.base_species
+
+    # Base stats are public knowledge: look up from the crosswalk by species name
+    base_stats = lookup_base_stats(species)
+
     return PokemonObservation(
-        species=poke.name or poke.base_species,
+        species=species,
         hp_fraction=poke.hp_pct,
         status=poke.status,
         is_active=is_active,
@@ -215,7 +224,7 @@ def _pokemon_to_opponent_observation(
             "accuracy": poke.accuracy_boost,
             "evasion": poke.evasion_boost,
         },
-        base_stats={},  # Never reveal opponent base stats
+        base_stats=base_stats,
         types=poke.types,
         level=poke.level,
         is_own=False,

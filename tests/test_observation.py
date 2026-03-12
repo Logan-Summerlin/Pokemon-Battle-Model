@@ -197,13 +197,15 @@ class TestObservationConstruction:
 
 
 class TestHiddenInfoDoctrine:
-    def test_opponent_base_stats_hidden(self) -> None:
-        """Opponent base stats should never be revealed."""
+    def test_opponent_base_stats_from_crosswalk(self) -> None:
+        """Opponent base stats are public knowledge (looked up by species)."""
         battle = make_battle(num_turns=3)
         obs = build_observations(battle)
         opp = obs[0].opponent_team[0]
-        # Base stats dict should be empty for opponent
-        assert opp.base_stats == {} or all(v == 0 for v in opp.base_stats.values())
+        # Base stats should be populated from crosswalk for known species
+        # Charizard: HP=78, Atk=84, Def=78, SpA=109, SpD=85, Spe=100
+        assert opp.base_stats.get("hp", 0) > 0
+        assert opp.base_stats.get("spe", 0) > 0
 
     def test_own_base_stats_visible(self) -> None:
         """Own base stats should be available."""
