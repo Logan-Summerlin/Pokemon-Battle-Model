@@ -52,11 +52,5 @@ checkpoints/   → baseline_mlp/, baseline_gru/, phase4_250/
 - Training data: `.npz` tensors → `WindowedTurnDataset` → per-turn sliding window examples
 - Split: 80/10/10 by battle ID (no leakage)
 - Loss: masked cross-entropy (policy) + aux loss (0.2 weight)
-
-## Known Data Issues
-- `terastallized` flag always zero in processed data (dead feature)
-- Field binary side conditions (16 dims) always zero (pipeline extraction issue)
-- Aux labels: only item_targets populated; speed/role/tera/move-family are placeholder -1
-
 ## Tech Stack
 Python 3.11+, PyTorch 2.2+, Hydra, W&B, websockets, numpy, pytest
