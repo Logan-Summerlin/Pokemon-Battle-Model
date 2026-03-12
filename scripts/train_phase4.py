@@ -51,11 +51,10 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 
 from src.data.tensorizer import BattleVocabularies
-from src.data.auxiliary_labels import NUM_ITEM_CLASSES, NUM_MOVE_FAMILIES
+from src.data.auxiliary_labels import NUM_ITEM_CLASSES
 from src.models.battle_transformer import (
     BattleTransformer,
     TransformerConfig,
-    TransformerOutput,
     compute_total_loss,
     TOKENS_PER_STEP,
 )
@@ -162,12 +161,24 @@ class WindowedTurnDataset(Dataset):
     ) -> None:
         self.max_window = max_window
         self.examples: list[tuple[int, int]] = []
-        self.battles = battles
+        self.battles: list[dict[str, torch.Tensor]] = []
 
         for b_idx, battle in enumerate(battles):
+            tensor_battle = {
+                "own_team": torch.from_numpy(battle["own_team"]).float(),
+                "opponent_team": torch.from_numpy(battle["opponent_team"]).float(),
+                "field": torch.from_numpy(battle["field"]).float(),
+                "context": torch.from_numpy(battle["context"]).float(),
+                "legal_mask": torch.from_numpy(battle["legal_mask"]).float(),
+                "action": torch.from_numpy(battle["action"]).long(),
+                "game_result": torch.from_numpy(battle["game_result"]).float(),
+                "item_targets": torch.from_numpy(battle["item_targets"]).long(),
+            }
+            self.battles.append(tensor_battle)
+
             seq_len = int(battle.get("seq_len", battle["action"].shape[0]))
             for t in range(seq_len):
-                action = int(battle["action"][t])
+                action = int(tensor_battle["action"][t])
                 if action >= 0:
                     self.examples.append((b_idx, t))
 
@@ -182,35 +193,16 @@ class WindowedTurnDataset(Dataset):
         end = t_idx + 1
         actual_len = end - start
 
-        own_team = battle["own_team"][start:end]
-        opp_team = battle["opponent_team"][start:end]
-        field_feat = battle["field"][start:end]
-        context = battle["context"][start:end]
-        legal_mask = battle["legal_mask"][start:end]
-
-        action = int(battle["action"][t_idx])
-        game_result = float(battle["game_result"][t_idx])
-
-        item_targets = battle["item_targets"][t_idx]
-        speed_targets = battle["speed_targets"][t_idx]
-        role_targets = battle["role_targets"][t_idx]
-        tera_targets = battle["tera_targets"][t_idx]
-        move_family_targets = battle["move_family_targets"][t_idx]
-
         return {
-            "own_team": torch.from_numpy(own_team.copy()).float(),
-            "opponent_team": torch.from_numpy(opp_team.copy()).float(),
-            "field": torch.from_numpy(field_feat.copy()).float(),
-            "context": torch.from_numpy(context.copy()).float(),
-            "legal_mask": torch.from_numpy(legal_mask.copy()).float(),
-            "action": torch.tensor(action, dtype=torch.long),
-            "game_result": torch.tensor(game_result, dtype=torch.float),
+            "own_team": battle["own_team"][start:end],
+            "opponent_team": battle["opponent_team"][start:end],
+            "field": battle["field"][start:end],
+            "context": battle["context"][start:end],
+            "legal_mask": battle["legal_mask"][start:end],
+            "action": battle["action"][t_idx],
+            "game_result": battle["game_result"][t_idx],
             "seq_len": torch.tensor(actual_len, dtype=torch.long),
-            "item_targets": torch.from_numpy(item_targets.copy()).long(),
-            "speed_targets": torch.from_numpy(speed_targets.copy()).long(),
-            "role_targets": torch.from_numpy(role_targets.copy()).long(),
-            "tera_targets": torch.from_numpy(tera_targets.copy()).long(),
-            "move_family_targets": torch.from_numpy(move_family_targets.copy()).long(),
+            "item_targets": battle["item_targets"][t_idx],
         }
 
 
@@ -225,9 +217,7 @@ def collate_windowed(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Te
     result["action"] = torch.stack([item["action"] for item in batch])
     result["game_result"] = torch.stack([item["game_result"] for item in batch])
 
-    for key in ["item_targets", "speed_targets", "role_targets", "tera_targets"]:
-        result[key] = torch.stack([item[key] for item in batch])
-    result["move_family_targets"] = torch.stack([item["move_family_targets"] for item in batch])
+    result["item_targets"] = torch.stack([item["item_targets"] for item in batch])
 
     # Sequence tensors: right-pad to max_len (model masks padding via seq_len)
     for key in ["own_team", "opponent_team", "field", "context", "legal_mask"]:
@@ -319,10 +309,10 @@ def forward_step(
     model: BattleTransformer,
     batch: dict[str, torch.Tensor],
     config: TransformerConfig,
-) -> tuple[torch.Tensor, dict[str, float], torch.Tensor]:
+) -> tuple[torch.Tensor, dict[str, float], torch.Tensor, dict[str, torch.Tensor] | None]:
     """Forward pass for windowed turn data.
 
-    Returns: (loss, loss_dict, policy_logits)
+    Returns: (loss, loss_dict, policy_logits, auxiliary_preds)
     """
     own_team = batch["own_team"]
     opp_team = batch["opponent_team"]
@@ -343,20 +333,13 @@ def forward_step(
 
     logits = output.policy_logits
 
-    batch_size = own_team.shape[0]
     last_idx = (seq_len - 1).clamp(min=0)
     legal_last = torch.gather(
         legal_mask_seq, dim=1,
         index=last_idx.unsqueeze(1).unsqueeze(2).expand(-1, 1, NUM_ACTIONS),
     ).squeeze(1)
 
-    aux_targets = {
-        "item_targets": batch["item_targets"],
-        "speed_targets": batch["speed_targets"],
-        "role_targets": batch["role_targets"],
-        "tera_targets": batch["tera_targets"],
-        "move_family_targets": batch["move_family_targets"],
-    }
+    aux_targets = {"item_targets": batch["item_targets"]}
 
     loss, loss_dict = compute_total_loss(
         output, action, legal_last,
@@ -365,7 +348,7 @@ def forward_step(
         config=config,
     )
 
-    return loss, loss_dict, logits
+    return loss, loss_dict, logits, output.auxiliary_preds
 
 
 def train_epoch(
@@ -385,7 +368,7 @@ def train_epoch(
     for batch_idx, batch in enumerate(loader):
         batch = {k: v.to(device, non_blocking=non_blocking_transfer) for k, v in batch.items()}
         with _amp_context(amp_dtype):
-            loss, loss_dict, logits = forward_step(model, batch, config)
+            loss, loss_dict, logits, _ = forward_step(model, batch, config)
 
         if scaler is not None:
             scaler.scale(loss / grad_accum).backward()
@@ -449,7 +432,7 @@ def validate(
     for batch in loader:
         batch = {k: v.to(device, non_blocking=non_blocking_transfer) for k, v in batch.items()}
         with _amp_context(amp_dtype):
-            loss, loss_dict, logits = forward_step(model, batch, config)
+            loss, loss_dict, logits, aux_preds = forward_step(model, batch, config)
 
         total_loss += loss_dict.get("total", 0.0)
         total_policy += loss_dict.get("policy", 0.0)
@@ -467,27 +450,21 @@ def validate(
             total_examples += valid.sum().item()
 
         # Auxiliary accuracy
-        with _amp_context(amp_dtype):
-            output = model(
-                batch["own_team"], batch["opponent_team"], batch["field"], batch["context"],
-                legal_mask=batch["legal_mask"], seq_len=batch["seq_len"],
-                return_auxiliary=True, return_value=False,
-            )
-        if isinstance(output, TransformerOutput) and output.auxiliary_preds is not None:
+        if aux_preds is not None:
             for head, tgt_key, short in [
                 ("item_logits", "item_targets", "item"),
                 ("speed_logits", "speed_targets", "speed"),
                 ("role_logits", "role_targets", "role"),
             ]:
-                if head in output.auxiliary_preds and tgt_key in batch:
-                    pred = output.auxiliary_preds[head]
+                if head in aux_preds and tgt_key in batch:
+                    pred = aux_preds[head]
                     target = batch[tgt_key]
                     flat_pred = pred.reshape(-1, pred.shape[-1])
                     flat_target = target.reshape(-1)
                     valid_aux = flat_target >= 0
                     if valid_aux.any():
-                        aux_preds = flat_pred[valid_aux].argmax(dim=-1)
-                        aux_correct[short] += (aux_preds == flat_target[valid_aux]).sum().item()
+                        aux_pred_classes = flat_pred[valid_aux].argmax(dim=-1)
+                        aux_correct[short] += (aux_pred_classes == flat_target[valid_aux]).sum().item()
                         aux_total[short] += valid_aux.sum().item()
 
     n = max(n_batches, 1)
@@ -541,11 +518,6 @@ def add_auxiliary_labels(sequences):
         seq_len, n_slots = opp_team.shape[0], opp_team.shape[1]
 
         item_targets = np.full((seq_len, n_slots), -1, dtype=np.int64)
-        speed_targets = np.full((seq_len, n_slots), -1, dtype=np.int64)
-        role_targets = np.full((seq_len, n_slots), -1, dtype=np.int64)
-        tera_targets = np.full((seq_len, n_slots), -1, dtype=np.int64)
-        move_family_targets = np.full((seq_len, n_slots, NUM_MOVE_FAMILIES), -1, dtype=np.int64)
-
         for t in range(seq_len):
             for s in range(n_slots):
                 feat = opp_team[t, s]
@@ -556,15 +528,9 @@ def add_auxiliary_labels(sequences):
                     item_targets[t, s] = min(item_idx % NUM_ITEM_CLASSES, NUM_ITEM_CLASSES - 1)
 
         if not is_seq:
-            item_targets, speed_targets = item_targets[0], speed_targets[0]
-            role_targets, tera_targets = role_targets[0], tera_targets[0]
-            move_family_targets = move_family_targets[0]
+            item_targets = item_targets[0]
 
         new_seq["item_targets"] = item_targets
-        new_seq["speed_targets"] = speed_targets
-        new_seq["role_targets"] = role_targets
-        new_seq["tera_targets"] = tera_targets
-        new_seq["move_family_targets"] = move_family_targets
         augmented.append(new_seq)
     return augmented
 
@@ -616,7 +582,7 @@ def evaluate_on_test(
     for batch in loader:
         batch = {k: v.to(device, non_blocking=non_blocking_transfer) for k, v in batch.items()}
         with _amp_context(amp_dtype):
-            loss, loss_dict, logits = forward_step(model, batch, config)
+            loss, loss_dict, logits, _ = forward_step(model, batch, config)
 
         total_loss += loss_dict.get("total", 0.0)
         total_policy += loss_dict.get("policy", 0.0)
