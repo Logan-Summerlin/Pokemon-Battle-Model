@@ -63,7 +63,7 @@ def make_pokemon_obs(
         item=item,
         ability=ability,
         boosts={"atk": 0, "def": 0, "spa": 0, "spd": 0, "spe": 0, "accuracy": 0, "evasion": 0},
-        base_stats={"hp": 35, "atk": 55, "def": 40, "spa": 50, "spd": 50, "spe": 90} if is_own else {},
+        base_stats={"hp": 35, "atk": 55, "def": 40, "spa": 50, "spd": 50, "spe": 90},
         types="Electric",
         level=100,
         is_own=is_own,
@@ -190,14 +190,29 @@ class TestPokemonTensorization:
         unknown_item_idx = 9 + 14 + 3  # after categorical, continuous, is_active, is_fainted, is_own
         assert tensor[unknown_item_idx] == 1.0
 
-    def test_opponent_no_base_stats(self) -> None:
+    def test_opponent_base_stats_from_crosswalk(self) -> None:
+        """Opponent pokemon now get base stats from crosswalk (public knowledge)."""
         vocabs = BattleVocabularies()
-        poke = make_pokemon_obs(is_own=False)
+        # Create opponent with base_stats populated (as crosswalk now provides)
+        poke = PokemonObservation(
+            species="Charizard",
+            hp_fraction=1.0,
+            is_active=True,
+            is_own=False,
+            moves=[],
+            item=UNKNOWN,
+            ability=UNKNOWN,
+            boosts={"atk": 0, "def": 0, "spa": 0, "spd": 0, "spe": 0, "accuracy": 0, "evasion": 0},
+            base_stats={"hp": 78, "atk": 84, "def": 78, "spa": 109, "spd": 85, "spe": 100},
+            types="Fire/Flying",
+        )
         tensor = tensorize_pokemon(poke, vocabs, build_vocab=True)
         # Base stats start at index 9 + 1 + 7 = 17
         base_stat_start = 9 + 1 + 7  # after categorical, hp_frac, boosts
-        for i in range(6):
-            assert tensor[base_stat_start + i] == 0.0
+        # HP base stat should be 78/255.0
+        assert tensor[base_stat_start] == pytest.approx(78 / 255.0)
+        # Speed base stat should be 100/255.0
+        assert tensor[base_stat_start + 5] == pytest.approx(100 / 255.0)
 
 
 # ── Tests: Field tensorization ────────────────────────────────────────────
