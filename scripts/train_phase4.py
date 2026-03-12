@@ -705,6 +705,12 @@ def save_checkpoint(model, optimizer, config, epoch, val_loss, checkpoint_dir, i
             "hidden_dim": config.hidden_dim,
             "num_heads": config.num_heads,
             "dropout": config.dropout,
+            "ffn_multiplier": config.ffn_multiplier,
+            "species_embedding_dim": config.species_embedding_dim,
+            "move_embedding_dim": config.move_embedding_dim,
+            "item_embedding_dim": config.item_embedding_dim,
+            "ability_embedding_dim": config.ability_embedding_dim,
+            "type_embedding_dim": config.type_embedding_dim,
             "species_vocab_size": config.species_vocab_size,
             "moves_vocab_size": config.moves_vocab_size,
             "items_vocab_size": config.items_vocab_size,
@@ -743,7 +749,13 @@ def main() -> None:
     parser.add_argument("--hidden-dim", type=int, default=None)
     parser.add_argument("--num-layers", type=int, default=None)
     parser.add_argument("--num-heads", type=int, default=None)
+    parser.add_argument("--ffn-multiplier", type=int, default=4)
     parser.add_argument("--dropout", type=float, default=0.1)
+    parser.add_argument("--species-embedding-dim", type=int, default=64)
+    parser.add_argument("--move-embedding-dim", type=int, default=32)
+    parser.add_argument("--item-embedding-dim", type=int, default=32)
+    parser.add_argument("--ability-embedding-dim", type=int, default=32)
+    parser.add_argument("--type-embedding-dim", type=int, default=16)
     parser.add_argument("--batch-size", type=int, default=None)
     parser.add_argument("--epochs", type=int, default=None)
     parser.add_argument("--lr", type=float, default=1e-4)
@@ -980,6 +992,12 @@ def main() -> None:
     config = TransformerConfig.from_vocabs(
         vocabs, num_layers=args.num_layers, hidden_dim=args.hidden_dim,
         num_heads=args.num_heads, dropout=args.dropout,
+        ffn_multiplier=args.ffn_multiplier,
+        species_embedding_dim=args.species_embedding_dim,
+        move_embedding_dim=args.move_embedding_dim,
+        item_embedding_dim=args.item_embedding_dim,
+        ability_embedding_dim=args.ability_embedding_dim,
+        type_embedding_dim=args.type_embedding_dim,
         auxiliary_loss_weight=args.aux_weight,
         use_value_head=not args.no_value_head,
         value_loss_weight=args.value_weight,
@@ -991,12 +1009,18 @@ def main() -> None:
         model = torch.compile(model)
         logger.info("Enabled torch.compile for model")
     logger.info(f"Model: {config.num_layers}L/{config.hidden_dim}d/{config.num_heads}H, "
-                f"{param_count:,} params")
+                f"FFN x{config.ffn_multiplier}, {param_count:,} params")
 
     training_config = {
         "mode": args.mode, "num_layers": config.num_layers,
         "hidden_dim": config.hidden_dim, "num_heads": config.num_heads,
+        "ffn_multiplier": config.ffn_multiplier,
         "dropout": config.dropout, "parameter_count": param_count,
+        "species_embedding_dim": config.species_embedding_dim,
+        "move_embedding_dim": config.move_embedding_dim,
+        "item_embedding_dim": config.item_embedding_dim,
+        "ability_embedding_dim": config.ability_embedding_dim,
+        "type_embedding_dim": config.type_embedding_dim,
         "batch_size": args.batch_size, "max_epochs": args.epochs,
         "learning_rate": args.lr, "weight_decay": args.weight_decay,
         "warmup_steps": args.warmup_steps, "patience": args.patience,

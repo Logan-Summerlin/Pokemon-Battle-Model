@@ -215,7 +215,10 @@ class TestHeads:
         assert preds["item_logits"].shape == (4, MAX_TEAM_SIZE, config.num_item_classes)
         assert preds["speed_logits"].shape == (4, MAX_TEAM_SIZE, config.num_speed_buckets)
         assert preds["role_logits"].shape == (4, MAX_TEAM_SIZE, config.num_role_archetypes)
-        assert preds["tera_logits"].shape == (4, MAX_TEAM_SIZE, config.num_tera_categories)
+        assert "tera_logits" not in preds
+        assert preds["threat_profile_logits"].shape == (
+            4, MAX_TEAM_SIZE, config.num_speed_buckets * config.num_role_archetypes
+        )
         assert preds["move_family_logits"].shape == (4, MAX_TEAM_SIZE, config.num_move_families)
 
     def test_value_head(self, config):
