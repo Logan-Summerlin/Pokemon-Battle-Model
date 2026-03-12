@@ -8,51 +8,68 @@ This project builds an AI agent that plays Gen 9 OU singles on Pokemon Showdown.
 
 **Key design constraint:** The agent only ever sees what a real player would see. Hidden information (opponent items, abilities, EVs, unrevealed moves) is never leaked into the observation space.
 
+## Current Status
+
+- **Phases 0–3**: Complete (scope, Showdown integration, data pipeline, baselines)
+- **Phase 4**: In progress (BattleTransformer model, compute experiments, P8-Lean optimization)
+- **Phases 5–8**: Not started (synthetic fine-tuning, evaluation harness, offline RL, enhancements)
+
 ## Project Structure
 
 ```
-├── docs/                       # Project documentation
+├── docs/                       # Active project documentation
 │   ├── SCOPE.md                # Frozen scope decisions
 │   ├── EVALUATION_SPEC.md      # Success metrics and evaluation protocol
-│   ├── CHECKPOINT_CONVENTION.md # Model checkpoint naming scheme
-│   └── IMPLEMENTATION_PLAN.md  # Full 8-phase build order
-├── archive/                    # Historical planning documents
-│   ├── pokemon_model_project_plan.md
-│   └── pokemon_redteam_report.md
+│   ├── IMPLEMENTATION_PLAN.md  # Full 8-phase build order
+│   ├── CHECKPOINT_CONVENTION.md# Model checkpoint naming scheme
+│   └── PHASE4_ARCHITECTURE_AND_TRAINING.md  # Consolidated Phase 4 reference
+├── archive/                    # Historical and superseded documents
 ├── configs/                    # Hydra configuration files
 │   ├── model/                  # Model architecture configs
 │   ├── training/               # Training hyperparameters
-│   └── evaluation/             # Evaluation settings
+│   ├── evaluation/             # Evaluation settings
+│   └── environment/            # Showdown server config
 ├── src/                        # Source code
 │   ├── environment/            # Showdown interface and battle env
 │   ├── data/                   # Replay parsing and tensorization
-│   ├── models/                 # Model definitions
+│   ├── models/                 # Model definitions (baselines + transformer)
 │   ├── training/               # Training loops
 │   ├── bots/                   # Bot implementations
 │   ├── evaluation/             # Evaluation harness
-│   └── synthetic/              # Synthetic scenario factory
+│   └── synthetic/              # Synthetic scenario factory (stub)
 ├── tests/                      # Unit and integration tests
 ├── scripts/                    # Training, evaluation, data scripts
-├── data/                       # Raw replays, processed tensors, splits
+├── data/                       # Processed tensors, vocabs, metadata
 └── checkpoints/                # Model checkpoints
 ```
 
 ## Setup
 
 ```bash
-# Create virtual environment
 python -m venv .venv
 source .venv/bin/activate
-
-# Install dependencies
 pip install -e ".[dev]"
-
-# Run tests
 pytest
 ```
 
-## Current Status
+## Training
 
-**Phase 0: Research, Scoping, and Infrastructure** — Complete.
+```bash
+# P8 on 1K battles
+python scripts/train_p8_1k.py --num-battles 1000 --seeds 42 --batch-size 32 --epochs 30
 
-See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) for the full roadmap.
+# P8-Lean on 10K battles
+python scripts/train_p8_lean.py --num-battles 10000 --seeds 42 43 44 --batch-size 64
+
+# See docs/PHASE4_ARCHITECTURE_AND_TRAINING.md for full training reference
+```
+
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [SCOPE.md](docs/SCOPE.md) | Frozen scope: format, info regime, data, architecture |
+| [IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) | Full 8-phase roadmap with exit gates |
+| [EVALUATION_SPEC.md](docs/EVALUATION_SPEC.md) | Metrics, thresholds, evaluation protocol |
+| [PHASE4_ARCHITECTURE_AND_TRAINING.md](docs/PHASE4_ARCHITECTURE_AND_TRAINING.md) | Model variants, training commands, optimization |
+| [CHECKPOINT_CONVENTION.md](docs/CHECKPOINT_CONVENTION.md) | Checkpoint naming scheme |
