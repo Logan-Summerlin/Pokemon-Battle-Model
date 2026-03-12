@@ -161,6 +161,7 @@ class TransformerConfig:
             item_embedding_dim=16,
             ability_embedding_dim=16,
             type_embedding_dim=12,
+            max_seq_len=5,
         )
         base.update(kwargs)
         if vocabs is not None:
