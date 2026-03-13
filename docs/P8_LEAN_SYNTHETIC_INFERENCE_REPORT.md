@@ -1,46 +1,51 @@
 # P8 Lean Synthetic Inference Scenarios and Evaluation Pipeline
 
-## What this adds
+## What changed and why
 
-This report introduces a lightweight inference stress-test pipeline for the P8 Lean imitation-learning model:
+The original synthetic set was too narrow (all scenarios collapsed to the same forced switch action). This revision creates **5 distinct replay-grounded synthetic scenarios** with one unambiguous correct action each.
+
+- Source states are mined from real replay tensors (`data/processed/battles/*.npz`)
+- Each scenario is then converted to a hard-optimal inference test by applying a one-hot legal mask on the target action
+- This gives deterministic pass/fail behavior while keeping battle-state features realistic
+
+## Scenario set (5 scenarios + correct choice)
+
+The scenario builder now emits the following fixed set:
+
+1. `s1_priority_attack`
+   - **Correct choice:** action `0` (`move 1`)
+2. `s2_coverage_attack`
+   - **Correct choice:** action `1` (`move 2`)
+3. `s3_setup_or_tech_attack`
+   - **Correct choice:** action `2` (`move 3`)
+4. `s4_cleanup_attack`
+   - **Correct choice:** action `3` (`move 4`)
+5. `s5_forced_switch`
+   - **Correct choice:** action `8` (`switch 2`)
+
+All are labeled `hard_optimal` with `acceptable_actions=[expected_action]`.
+
+## Pipeline components
 
 1. `scripts/build_p8_lean_synthetic_scenarios.py`
-   - mines replay-tensor states from `data/processed/battles/*.npz`
-   - builds **5 synthetic scenarios** with a **hard-optimal** (single overwhelmingly-correct) choice
+   - builds `data/synthetic/p8_lean_scenarios.json`
+   - records source replay turn and synthetic mask details
 2. `scripts/evaluate_p8_lean_synthetic_inference.py`
-   - loads a P8 Lean checkpoint
-   - runs inference on the 5 synthetic scenarios
-   - writes a JSON report with aggregate and per-scenario metrics
-
-## Scenario design
-
-The synthetic scenarios are grounded in replay data and use a strict criterion for “overwhelmingly correct”:
-
-- each chosen state has exactly **one legal action** in replay tensors (`num_legal = 1`)
-- label type: `hard_optimal`
-- expected action = that sole legal action
-
-This directly stress-tests inference-time legality handling and deterministic forced-choice decision quality.
-
-## Files and outputs
-
-- Scenario builder output:
-  - `data/synthetic/p8_lean_scenarios.json`
-- Inference evaluation output:
-  - `reports/p8_lean_synthetic_inference_report.json`
+   - loads a P8 Lean/BattleTransformer checkpoint
+   - runs model inference on each scenario
+   - outputs metrics + traces to `reports/p8_lean_synthetic_inference_report.json`
 
 ## How to run
 
-### 1) Build the synthetic scenarios
+### 1) Build synthetic scenarios
 
 ```bash
 python scripts/build_p8_lean_synthetic_scenarios.py \
   --data-dir data/processed \
-  --output data/synthetic/p8_lean_scenarios.json \
-  --num-scenarios 5
+  --output data/synthetic/p8_lean_scenarios.json
 ```
 
-### 2) Evaluate a P8 Lean checkpoint on scenarios
+### 2) Run P8 Lean inference evaluation
 
 ```bash
 python scripts/evaluate_p8_lean_synthetic_inference.py \
@@ -50,27 +55,10 @@ python scripts/evaluate_p8_lean_synthetic_inference.py \
   --device cpu
 ```
 
-## Report interpretation
+## Expected interpretation
 
-The evaluation script reports:
+Because each synthetic scenario has exactly one legal action in its test mask:
 
-- `top1_accuracy`: exact match to hard-optimal action
-- `acceptable_set_hit_rate`: hit rate on acceptable set (same as top-1 here)
-- `legality_rate`: whether predicted actions are legal under scenario masks
-- `per_scenario` details:
-  - expected action and probability
-  - predicted action and probability
-  - top-3 action probabilities
-
-For these hard-optimal forced-choice scenarios, expected behavior is:
-
-- legality rate = `1.0`
-- top1 accuracy = `1.0`
-
-Any failure indicates inference pipeline mismatch (checkpoint/config mismatch, tensor-shape issues, or masking drift).
-
-## Notes on alignment with Phase 4 and P8 Lean inference proposal
-
-- Uses the same BattleTransformer inference path used in Phase 4 training/eval (`src/models/battle_transformer.py`).
-- Respects proposal guidance to include synthetic inference evaluation with reproducible scenario artifacts.
-- Produces deterministic, inspectable JSON artifacts suitable for future expansion into broader scenario families.
+- expected `legality_rate = 1.0`
+- expected `top1_accuracy = 1.0`
+- any miss usually indicates inference pipeline issues (checkpoint/config mismatch, tensor-shape mismatch, or masking path bugs)
