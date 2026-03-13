@@ -3,12 +3,13 @@
   "tokens": {
     "": 0,
     "unknown": 1,
-    "noweather": 2,
-    "sunnyday": 3,
-    "snowscape": 4,
+    "sunnyday": 2,
+    "snowscape": 3,
+    "noweather": 4,
     "raindance": 5,
     "sandstorm": 6,
-    "snow": 7
+    "snow": 7,
+    "deltastream": 8
   },
   "frozen": true
 }

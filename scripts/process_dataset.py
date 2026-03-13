@@ -4,6 +4,8 @@
 Reads .json.lz4 files from data/raw/, parses them into observations,
 tensorizes, and saves processed data with train/val/test splits.
 
+Uses streaming processing to avoid loading all battles into memory at once.
+
 Usage:
     python scripts/process_dataset.py
     python scripts/process_dataset.py --input-dir data/raw --output-dir data/processed
@@ -55,34 +57,100 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    from src.data.dataset import create_splits, save_processed_battles
-    from src.data.priors import build_priors_from_battles
-    from src.data.replay_parser import load_battles_from_directory
-    from src.data.tensorizer import BattleVocabularies
+    import numpy as np
 
-    # Load battles
-    logger.info(f"Loading battles from {args.input_dir}...")
-    battles = load_battles_from_directory(
+    from src.data.dataset import create_splits
+    from src.data.observation import build_observations
+    from src.data.priors import MetagamePriors
+    from src.data.replay_parser import iter_battles_from_directory
+    from src.data.tensorizer import BattleVocabularies, tensorize_battle
+
+    # Set up output directories
+    output_dir = Path(args.output_dir)
+    battles_dir = output_dir / "battles"
+    battles_dir.mkdir(parents=True, exist_ok=True)
+
+    vocabs = BattleVocabularies()
+    priors = MetagamePriors()
+
+    metadata: dict = {
+        "num_battles": 0,
+        "num_turns": 0,
+        "num_wins": 0,
+        "num_losses": 0,
+        "avg_turns": 0.0,
+        "elo_distribution": {},
+        "battle_ids": [],
+    }
+    elo_counts: dict[str, int] = {}
+
+    # Stream battles one at a time to avoid OOM
+    logger.info(f"Processing battles from {args.input_dir} (streaming)...")
+    for battle in iter_battles_from_directory(
         args.input_dir,
         max_battles=args.max_battles,
-    )
-    logger.info(f"Loaded {len(battles)} valid battles")
+    ):
+        # Build observations
+        observations = build_observations(battle)
+        if not observations:
+            continue
 
-    if not battles:
-        logger.error("No valid battles found!")
+        # Tensorize
+        seq = tensorize_battle(
+            observations, vocabs, build_vocab=True, max_turns=args.max_turns
+        )
+        if not seq:
+            continue
+
+        # Save as npz
+        battle_file = battles_dir / f"{battle.battle_id}.npz"
+        np.savez_compressed(str(battle_file), **seq)
+
+        # Update priors
+        priors.update_from_battle(battle)
+
+        # Update metadata
+        metadata["num_battles"] += 1
+        metadata["num_turns"] += len(observations)
+        metadata["battle_ids"].append(battle.battle_id)
+
+        if battle.won:
+            metadata["num_wins"] += 1
+        else:
+            metadata["num_losses"] += 1
+
+        elo_bucket = str((battle.player_elo // 100) * 100)
+        elo_counts[elo_bucket] = elo_counts.get(elo_bucket, 0) + 1
+
+        if metadata["num_battles"] % 1000 == 0:
+            logger.info(
+                f"  Processed {metadata['num_battles']} battles "
+                f"({metadata['num_turns']} turns)..."
+            )
+
+    if metadata["num_battles"] == 0:
+        logger.error("No valid battles processed!")
         sys.exit(1)
 
-    # Build vocabularies and process
-    vocabs = BattleVocabularies()
-    logger.info("Processing battles...")
-    metadata = save_processed_battles(
-        battles, args.output_dir, vocabs, max_turns=args.max_turns,
+    metadata["elo_distribution"] = elo_counts
+    metadata["avg_turns"] = metadata["num_turns"] / metadata["num_battles"]
+
+    # Save vocabularies
+    vocabs.freeze_all()
+    vocabs.save(output_dir / "vocabs")
+
+    # Save metadata
+    with open(output_dir / "metadata.json", "w") as f:
+        json.dump(metadata, f, indent=2)
+
+    logger.info(
+        f"Saved {metadata['num_battles']} battles to {output_dir} "
+        f"({metadata['num_turns']} total turns)"
     )
 
-    # Build and save priors
-    logger.info("Building metagame priors...")
-    priors = build_priors_from_battles(battles)
-    priors.save(Path(args.output_dir) / "priors.json")
+    # Save priors
+    logger.info("Saving metagame priors...")
+    priors.save(output_dir / "priors.json")
 
     # Create splits
     logger.info("Creating train/val/test splits...")
