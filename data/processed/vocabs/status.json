@@ -4,13 +4,13 @@
     "": 0,
     "unknown": 1,
     "nostatus": 2,
-    "brn": 3,
-    "fnt": 4,
-    "par": 5,
-    "psn": 6,
+    "fnt": 3,
+    "par": 4,
+    "brn": 5,
+    "slp": 6,
     "tox": 7,
-    "frz": 8,
-    "slp": 9
+    "psn": 8,
+    "frz": 9
   },
   "frozen": true
 }

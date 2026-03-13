@@ -4,13 +4,14 @@
     "": 0,
     "unknown": 1,
     "nofield": 2,
-    "grassyterrain": 3,
-    "trickroom": 4,
-    "electricterrain": 5,
-    "psychicterrain": 6,
-    "gravity": 7,
-    "mistyterrain": 8,
-    "magicroom": 9
+    "psychicterrain": 3,
+    "grassyterrain": 4,
+    "trickroom": 5,
+    "electricterrain": 6,
+    "mistyterrain": 7,
+    "gravity": 8,
+    "magicroom": 9,
+    "wonderroom": 10
   },
   "frozen": true
 }
