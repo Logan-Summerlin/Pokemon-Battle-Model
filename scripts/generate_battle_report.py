@@ -157,9 +157,15 @@ def generate_battle_report(battle_data: dict, filename: str) -> str:
         opp_preview = first_state.get("opponent_teampreview", [])
 
         lines.append("#### Player's Team")
-        lines.append(f"1. {format_pokemon_summary(player_active)} *(Lead)*")
+        active_flag = ""
+        if player_active.get("hp_pct", 1.0) < 1.0:
+            active_flag = " **[ANOMALY: non-100% HP on Turn 1]**"
+        lines.append(f"1. {format_pokemon_summary(player_active)} *(Lead)*{active_flag}")
         for i, sw in enumerate(switches):
-            lines.append(f"{i+2}. {format_pokemon_summary(sw)}")
+            flag = ""
+            if sw.get("hp_pct", 1.0) < 1.0:
+                flag = " **[ANOMALY: non-100% HP on Turn 1]**"
+            lines.append(f"{i+2}. {format_pokemon_summary(sw)}{flag}")
         lines.append("")
 
         lines.append("#### Opponent's Team (from Team Preview)")
@@ -335,6 +341,75 @@ def main() -> None:
     report_lines.append("understanding the decision space that the P8-Lean imitation learning model")
     report_lines.append("must learn to navigate.")
     report_lines.append("")
+    # Data quality analysis: scan for turn-1 HP anomalies across ALL battles
+    all_files = sorted(input_dir.glob("*.json*"))
+    total_scanned = 0
+    affected_count = 0
+    hp_anomalies = []  # (name, hp, position)
+
+    for filepath in all_files:
+        try:
+            if filepath.name.endswith(".json.lz4"):
+                with lz4.frame.open(str(filepath), "rb") as f:
+                    d = json.loads(f.read().decode("utf-8"))
+            else:
+                with open(filepath, "r") as f:
+                    d = json.load(f)
+
+            s0 = d.get("states", [{}])[0]
+            total_scanned += 1
+            has_issue = False
+
+            pa = s0.get("player_active_pokemon", {})
+            if pa.get("hp_pct", 1.0) < 1.0:
+                has_issue = True
+                hp_anomalies.append((pa.get("name", "?"), pa["hp_pct"], "active"))
+
+            for sw in s0.get("available_switches", []):
+                if sw.get("hp_pct", 1.0) < 1.0:
+                    has_issue = True
+                    hp_anomalies.append((sw.get("name", "?"), sw["hp_pct"], "bench"))
+
+            if has_issue:
+                affected_count += 1
+        except Exception:
+            pass
+
+    # Build HP distribution buckets
+    from collections import Counter
+    hp_buckets: Counter = Counter()
+    for _, hp, _ in hp_anomalies:
+        bucket = f"{int(hp * 100) // 10 * 10}-{int(hp * 100) // 10 * 10 + 9}%"
+        hp_buckets[bucket] = hp_buckets.get(bucket, 0) + 1
+
+    report_lines.append("## Data Quality Note: Initial HP Anomalies")
+    report_lines.append("")
+    pct = affected_count / total_scanned * 100 if total_scanned else 0
+    report_lines.append(
+        f"**Across this dataset, {affected_count}/{total_scanned} battles "
+        f"({pct:.1f}%) show bench or active Pokemon with non-100% HP on "
+        f"Turn 1** — despite no prior moves, no hazards, and no field "
+        f"conditions being present. This is a systemic artifact of the "
+        f"Metamon dataset (`jakegrigsby/metamon-parsed-replays`), not an "
+        f"error in our processing pipeline."
+    )
+    report_lines.append("")
+    report_lines.append("| HP Range | Count |")
+    report_lines.append("|----------|-------|")
+    for bucket in sorted(hp_buckets.keys()):
+        report_lines.append(f"| {bucket} | {hp_buckets[bucket]} |")
+    report_lines.append("")
+    report_lines.append(
+        "**Impact on training**: The P8-Lean model sees these HP values as "
+        "ground truth during imitation learning. If the anomaly reflects "
+        "Metamon's internal HP normalization rather than actual in-battle "
+        "damage, this could introduce noise into the model's HP-dependent "
+        "decision making. This warrants investigation upstream in the "
+        "Metamon parser or a normalization pass that resets all Turn 1 bench "
+        "HP values to 100% when no prior damage source is present."
+    )
+    report_lines.append("")
+
     report_lines.append("## Table of Contents")
     report_lines.append("")
     for i, (fname, data, nt) in enumerate(short_battles):

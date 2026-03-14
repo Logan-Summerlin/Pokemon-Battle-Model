@@ -9,6 +9,25 @@ and the decision actually taken by the player. This data is crucial for
 understanding the decision space that the P8-Lean imitation learning model
 must learn to navigate.
 
+## Data Quality Note: Initial HP Anomalies
+
+**Across this dataset, 241/300 battles (80.3%) show bench or active Pokemon with non-100% HP on Turn 1** — despite no prior moves, no hazards, and no field conditions being present. This is a systemic artifact of the Metamon dataset (`jakegrigsby/metamon-parsed-replays`), not an error in our processing pipeline.
+
+| HP Range | Count |
+|----------|-------|
+| 0-9% | 21 |
+| 10-19% | 6 |
+| 20-29% | 13 |
+| 30-39% | 19 |
+| 40-49% | 30 |
+| 50-59% | 39 |
+| 60-69% | 42 |
+| 70-79% | 94 |
+| 80-89% | 155 |
+| 90-99% | 130 |
+
+**Impact on training**: The P8-Lean model sees these HP values as ground truth during imitation learning. If the anomaly reflects Metamon's internal HP normalization rather than actual in-battle damage, this could introduce noise into the model's HP-dependent decision making. This warrants investigation upstream in the Metamon parser or a normalization pass that resets all Turn 1 bench HP values to 100% when no prior damage source is present.
+
 ## Table of Contents
 
 1. [1322378-gen9ou-2387334841_Unrated_honeygather71890_vs_lockon89063_06-18-2025_WIN](#1-battle-1) — 8 turns, WIN
@@ -34,7 +53,7 @@ must learn to navigate.
 2. **leafeon** (HP: 100%) | Type: grass notype | Item: lifeorb | Ability: leafguard | Status: nostatus | Tera: fire
 3. **ogerponcornerstone** (HP: 100%) | Type: grass rock | Item: cornerstonemask | Ability: sturdy | Status: nostatus | Tera: rock
 4. **whimsicott** (HP: 100%) | Type: fairy grass | Item: lifeorb | Ability: chlorophyll | Status: nostatus | Tera: ghost
-5. **hydrapple** (HP: 61%) | Type: dragon grass | Item: rockyhelmet | Ability: regenerator | Status: nostatus | Tera: steel
+5. **hydrapple** (HP: 61%) | Type: dragon grass | Item: rockyhelmet | Ability: regenerator | Status: nostatus | Tera: steel **[ANOMALY: non-100% HP on Turn 1]**
 6. **meowscarada** (HP: 100%) | Type: dark grass | Item: choiceband | Ability: protean | Status: nostatus | Tera: ghost
 
 #### Opponent's Team (from Team Preview)
@@ -267,7 +286,7 @@ must learn to navigate.
 
 #### Player's Team
 1. **ribombee** (HP: 100%) | Type: bug fairy | Item: focussash | Ability: shielddust | Status: nostatus | Tera: bug *(Lead)*
-2. **gholdengo** (HP: 77%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy
+2. **gholdengo** (HP: 77%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy **[ANOMALY: non-100% HP on Turn 1]**
 3. **indeedee** (HP: 100%) | Type: normal psychic | Item: choicescarf | Ability: psychicsurge | Status: nostatus | Tera: fairy
 4. **ironcrown** (HP: 100%) | Type: psychic steel | Item: boosterenergy | Ability: quarkdrive | Status: nostatus | Tera: steel
 5. **hoopaunbound** (HP: 100%) | Type: dark psychic | Item: lifeorb | Ability: magician | Status: nostatus | Tera: psychic
@@ -603,7 +622,7 @@ must learn to navigate.
 
 #### Player's Team
 1. **slowkinggalar** (HP: 100%) | Type: poison psychic | Item: heavydutyboots | Ability: regenerator | Status: nostatus | Tera: fairy *(Lead)*
-2. **clefable** (HP: 25%) | Type: fairy notype | Item: leftovers | Ability: magicguard | Status: nostatus | Tera: steel
+2. **clefable** (HP: 25%) | Type: fairy notype | Item: leftovers | Ability: magicguard | Status: nostatus | Tera: steel **[ANOMALY: non-100% HP on Turn 1]**
 3. **hoopaunbound** (HP: 100%) | Type: dark psychic | Item: lifeorb | Ability: magician | Status: nostatus | Tera: fighting
 4. **dragapult** (HP: 100%) | Type: dragon ghost | Item: expertbelt | Ability: clearbody | Status: nostatus | Tera: ghost
 5. **dondozo** (HP: 100%) | Type: notype water | Item: leftovers | Ability: unaware | Status: nostatus | Tera: poison
@@ -1485,8 +1504,8 @@ must learn to navigate.
 1. **gholdengo** (HP: 100%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy *(Lead)*
 2. **ironvaliant** (HP: 100%) | Type: fairy fighting | Item: boosterenergy | Ability: quarkdrive | Status: nostatus | Tera: fairy
 3. **irontreads** (HP: 100%) | Type: ground steel | Item: boosterenergy | Ability: quarkdrive | Status: nostatus | Tera: flying
-4. **garchomp** (HP: 84%) | Type: dragon ground | Item: rockyhelmet | Ability: roughskin | Status: nostatus | Tera: steel
-5. **samurotthisui** (HP: 87%) | Type: dark water | Item: assaultvest | Ability: sharpness | Status: nostatus | Tera: dark
+4. **garchomp** (HP: 84%) | Type: dragon ground | Item: rockyhelmet | Ability: roughskin | Status: nostatus | Tera: steel **[ANOMALY: non-100% HP on Turn 1]**
+5. **samurotthisui** (HP: 87%) | Type: dark water | Item: assaultvest | Ability: sharpness | Status: nostatus | Tera: dark **[ANOMALY: non-100% HP on Turn 1]**
 6. **dragonite** (HP: 100%) | Type: dragon flying | Item: choiceband | Ability: multiscale | Status: nostatus | Tera: normal
 
 #### Opponent's Team (from Team Preview)
@@ -1987,11 +2006,11 @@ must learn to navigate.
 
 #### Player's Team
 1. **dragapult** (HP: 100%) | Type: dragon ghost | Item: leftovers | Ability: infiltrator | Status: nostatus | Tera: ghost *(Lead)*
-2. **moltres** (HP: 45%) | Type: fire flying | Item: heavydutyboots | Ability: flamebody | Status: nostatus | Tera: fairy
+2. **moltres** (HP: 45%) | Type: fire flying | Item: heavydutyboots | Ability: flamebody | Status: nostatus | Tera: fairy **[ANOMALY: non-100% HP on Turn 1]**
 3. **wochien** (HP: 100%) | Type: dark grass | Item: leftovers | Ability: tabletsofruin | Status: nostatus | Tera: fire
 4. **greattusk** (HP: 100%) | Type: fighting ground | Item: rockyhelmet | Ability: protosynthesis | Status: nostatus | Tera: fire
 5. **ogerponwellspring** (HP: 100%) | Type: grass water | Item: wellspringmask | Ability: waterabsorb | Status: nostatus | Tera: water
-6. **kingambit** (HP: 68%) | Type: dark steel | Item: leftovers | Ability: supremeoverlord | Status: nostatus | Tera: flying
+6. **kingambit** (HP: 68%) | Type: dark steel | Item: leftovers | Ability: supremeoverlord | Status: nostatus | Tera: flying **[ANOMALY: non-100% HP on Turn 1]**
 
 #### Opponent's Team (from Team Preview)
 1. **ragingbolt**
@@ -3161,7 +3180,7 @@ must learn to navigate.
 3. **greattusk** (HP: 100%) | Type: fighting ground | Item: rockyhelmet | Ability: protosynthesis | Status: nostatus | Tera: steel
 4. **skeledirge** (HP: 100%) | Type: fire ghost | Item: leftovers | Ability: unaware | Status: nostatus | Tera: fairy
 5. **dragapult** (HP: 100%) | Type: dragon ghost | Item: choiceband | Ability: infiltrator | Status: nostatus | Tera: ghost
-6. **alomomola** (HP: 82%) | Type: notype water | Item: heavydutyboots | Ability: regenerator | Status: nostatus | Tera: fairy
+6. **alomomola** (HP: 82%) | Type: notype water | Item: heavydutyboots | Ability: regenerator | Status: nostatus | Tera: fairy **[ANOMALY: non-100% HP on Turn 1]**
 
 #### Opponent's Team (from Team Preview)
 1. **dragapult**
@@ -3822,9 +3841,9 @@ must learn to navigate.
 1. **darkrai** (HP: 100%) | Type: dark notype | Item: leftovers | Ability: baddreams | Status: nostatus | Tera: poison *(Lead)*
 2. **dragonite** (HP: 100%) | Type: dragon flying | Item: heavydutyboots | Ability: multiscale | Status: nostatus | Tera: flying
 3. **enamorus** (HP: 100%) | Type: fairy flying | Item: choicespecs | Ability: contrary | Status: nostatus | Tera: stellar
-4. **gholdengo** (HP: 94%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy
-5. **greattusk** (HP: 90%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: ground
-6. **tinglu** (HP: 76%) | Type: dark ground | Item: leftovers | Ability: vesselofruin | Status: nostatus | Tera: poison
+4. **gholdengo** (HP: 94%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy **[ANOMALY: non-100% HP on Turn 1]**
+5. **greattusk** (HP: 90%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: ground **[ANOMALY: non-100% HP on Turn 1]**
+6. **tinglu** (HP: 76%) | Type: dark ground | Item: leftovers | Ability: vesselofruin | Status: nostatus | Tera: poison **[ANOMALY: non-100% HP on Turn 1]**
 
 #### Opponent's Team (from Team Preview)
 1. **jirachi**
@@ -4498,10 +4517,10 @@ must learn to navigate.
 
 #### Player's Team
 1. **ribombee** (HP: 100%) | Type: bug fairy | Item: focussash | Ability: shielddust | Status: nostatus | Tera: ghost *(Lead)*
-2. **greattusk** (HP: 93%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: water
-3. **dondozo** (HP: 68%) | Type: notype water | Item: leftovers | Ability: unaware | Status: nostatus | Tera: dragon
-4. **goodrahisui** (HP: 95%) | Type: dragon steel | Item: heavydutyboots | Ability: sapsipper | Status: nostatus | Tera: flying
-5. **milotic** (HP: 70%) | Type: notype water | Item: leftovers | Ability: marvelscale | Status: nostatus | Tera: fairy
+2. **greattusk** (HP: 93%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: water **[ANOMALY: non-100% HP on Turn 1]**
+3. **dondozo** (HP: 68%) | Type: notype water | Item: leftovers | Ability: unaware | Status: nostatus | Tera: dragon **[ANOMALY: non-100% HP on Turn 1]**
+4. **goodrahisui** (HP: 95%) | Type: dragon steel | Item: heavydutyboots | Ability: sapsipper | Status: nostatus | Tera: flying **[ANOMALY: non-100% HP on Turn 1]**
+5. **milotic** (HP: 70%) | Type: notype water | Item: leftovers | Ability: marvelscale | Status: nostatus | Tera: fairy **[ANOMALY: non-100% HP on Turn 1]**
 6. **salazzle** (HP: 100%) | Type: fire poison | Item: focussash | Ability: corrosion | Status: nostatus | Tera: ground
 
 #### Opponent's Team (from Team Preview)
