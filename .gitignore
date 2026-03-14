@@ -26,6 +26,11 @@ data/raw/*.tar.gz
 data/processed/*.parquet
 data/processed/*.bin
 
+# Fine-tuning data (separate from training data, do NOT mix)
+data/fine-tuning/raw/
+data/fine-tuning/processed/battles/
+data/fine-tuning/splits/
+
 # Checkpoints (large model files - baseline checkpoints tracked)
 # checkpoints/baseline_mlp/ and checkpoints/baseline_gru/ are tracked
 checkpoints/transformer/
