@@ -9,6 +9,15 @@ and the decision actually taken by the player. This data is crucial for
 understanding the decision space that the P8-Lean imitation learning model
 must learn to navigate.
 
+## Data Quality Note: Initial HP Anomalies (Corrected)
+
+The Metamon dataset (`jakegrigsby/metamon-parsed-replays`) reports ~80% of battles
+with bench Pokemon at non-100% HP on Turn 1, despite no prior moves, hazards, or
+field conditions. This is a systemic data artifact. **In this report, all such
+anomalous HP values have been corrected to 100% until the Pokemon first takes
+verifiable damage** (HP decrease from a move, hazard, weather, or other in-battle
+source). Post-damage HP values are reported as-is from the raw data.
+
 ## Table of Contents
 
 1. [1322378-gen9ou-2387334841_Unrated_honeygather71890_vs_lockon89063_06-18-2025_WIN](#1-battle-1) — 8 turns, WIN
@@ -34,7 +43,7 @@ must learn to navigate.
 2. **leafeon** (HP: 100%) | Type: grass notype | Item: lifeorb | Ability: leafguard | Status: nostatus | Tera: fire
 3. **ogerponcornerstone** (HP: 100%) | Type: grass rock | Item: cornerstonemask | Ability: sturdy | Status: nostatus | Tera: rock
 4. **whimsicott** (HP: 100%) | Type: fairy grass | Item: lifeorb | Ability: chlorophyll | Status: nostatus | Tera: ghost
-5. **hydrapple** (HP: 61%) | Type: dragon grass | Item: rockyhelmet | Ability: regenerator | Status: nostatus | Tera: steel
+5. **hydrapple** (HP: 100%) | Type: dragon grass | Item: rockyhelmet | Ability: regenerator | Status: nostatus | Tera: steel
 6. **meowscarada** (HP: 100%) | Type: dark grass | Item: choiceband | Ability: protean | Status: nostatus | Tera: ghost
 
 #### Opponent's Team (from Team Preview)
@@ -68,7 +77,7 @@ must learn to navigate.
   - Bench 1: **leafeon** (HP: 100%) [nostatus]
   - Bench 2: **ogerponcornerstone** (HP: 100%) [nostatus]
   - Bench 3: **whimsicott** (HP: 100%) [nostatus]
-  - Bench 4: **hydrapple** (HP: 61%) [nostatus]
+  - Bench 4: **hydrapple** (HP: 100%) [nostatus]
   - Bench 5: **meowscarada** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **gigadrain**
@@ -94,7 +103,7 @@ must learn to navigate.
   - Bench 1: **leafeon** (HP: 100%) [nostatus]
   - Bench 2: **ogerponcornerstone** (HP: 100%) [nostatus]
   - Bench 3: **whimsicott** (HP: 100%) [nostatus]
-  - Bench 4: **hydrapple** (HP: 61%) [nostatus]
+  - Bench 4: **hydrapple** (HP: 100%) [nostatus]
   - Bench 5: **meowscarada** (HP: 100%) [nostatus]
 
 **Decision**: Move 4: Use **synthesis**
@@ -120,7 +129,7 @@ must learn to navigate.
   - Bench 1: **leafeon** (HP: 100%) [nostatus] <-- CHOSEN
   - Bench 2: **ogerponcornerstone** (HP: 100%) [nostatus]
   - Bench 3: **whimsicott** (HP: 100%) [nostatus]
-  - Bench 4: **hydrapple** (HP: 61%) [nostatus]
+  - Bench 4: **hydrapple** (HP: 100%) [nostatus]
   - Bench 5: **meowscarada** (HP: 100%) [nostatus]
 
 **Decision**: Switch to bench slot 1: Switch to **leafeon**
@@ -132,7 +141,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used retaliate
 
-**Player Active**: **hydrapple** (HP: 61%) | Type: dragon grass | Item: rockyhelmet | Ability: regenerator | Status: nostatus | Tera: steel
+**Player Active**: **hydrapple** (HP: 100%) | Type: dragon grass | Item: rockyhelmet | Ability: regenerator | Status: nostatus | Tera: steel
 **Opponent Active**: **kingambit** (HP: 100%) | Type: dark steel | Ability: supremeoverlord | Status: nostatus | Tera: notype
 
 **Available Moves:**
@@ -267,7 +276,7 @@ must learn to navigate.
 
 #### Player's Team
 1. **ribombee** (HP: 100%) | Type: bug fairy | Item: focussash | Ability: shielddust | Status: nostatus | Tera: bug *(Lead)*
-2. **gholdengo** (HP: 77%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy
+2. **gholdengo** (HP: 100%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy
 3. **indeedee** (HP: 100%) | Type: normal psychic | Item: choicescarf | Ability: psychicsurge | Status: nostatus | Tera: fairy
 4. **ironcrown** (HP: 100%) | Type: psychic steel | Item: boosterenergy | Ability: quarkdrive | Status: nostatus | Tera: steel
 5. **hoopaunbound** (HP: 100%) | Type: dark psychic | Item: lifeorb | Ability: magician | Status: nostatus | Tera: psychic
@@ -301,7 +310,7 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **gholdengo** (HP: 77%) [nostatus]
+  - Bench 1: **gholdengo** (HP: 100%) [nostatus]
   - Bench 2: **indeedee** (HP: 100%) [nostatus]
   - Bench 3: **ironcrown** (HP: 100%) [nostatus]
   - Bench 4: **hoopaunbound** (HP: 100%) [nostatus]
@@ -320,7 +329,7 @@ must learn to navigate.
 **Opponent Active**: **espeon** (HP: 53%) | Type: notype psychic | Status: nostatus | Tera: notype
 
 **Available Switches:**
-  - Bench 1: **gholdengo** (HP: 77%) [nostatus] <-- CHOSEN
+  - Bench 1: **gholdengo** (HP: 100%) [nostatus] <-- CHOSEN
   - Bench 2: **indeedee** (HP: 100%) [nostatus]
   - Bench 3: **ironcrown** (HP: 100%) [nostatus]
   - Bench 4: **hoopaunbound** (HP: 100%) [nostatus]
@@ -347,7 +356,7 @@ must learn to navigate.
 
 **Available Switches:**
   - Bench 1: **ribombee** (HP: 100%) [nostatus]
-  - Bench 2: **gholdengo** (HP: 77%) [nostatus]
+  - Bench 2: **gholdengo** (HP: 100%) [nostatus]
   - Bench 3: **indeedee** (HP: 100%) [nostatus]
   - Bench 4: **ironcrown** (HP: 100%) [nostatus]
   - Bench 5: **hoopaunbound** (HP: 100%) [nostatus]
@@ -373,7 +382,7 @@ must learn to navigate.
 
 **Available Switches:**
   - Bench 1: **ribombee** (HP: 100%) [nostatus]
-  - Bench 2: **gholdengo** (HP: 77%) [nostatus]
+  - Bench 2: **gholdengo** (HP: 100%) [nostatus]
   - Bench 3: **indeedee** (HP: 100%) [nostatus]
   - Bench 4: **ironcrown** (HP: 100%) [nostatus]
   - Bench 5: **hoopaunbound** (HP: 100%) [nostatus]
@@ -399,7 +408,7 @@ must learn to navigate.
 
 **Available Switches:**
   - Bench 1: **ribombee** (HP: 100%) [nostatus] <-- CHOSEN
-  - Bench 2: **gholdengo** (HP: 77%) [nostatus]
+  - Bench 2: **gholdengo** (HP: 100%) [nostatus]
   - Bench 3: **indeedee** (HP: 100%) [nostatus]
   - Bench 4: **ironcrown** (HP: 100%) [nostatus]
   - Bench 5: **hoopaunbound** (HP: 100%) [nostatus]
@@ -413,7 +422,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used quickattack
 
-**Player Active**: **gholdengo** (HP: 77%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy
+**Player Active**: **gholdengo** (HP: 100%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy
 **Opponent Active**: **flareon** (HP: 100%) | Type: fire notype | Status: tox | Tera: notype
 
 **Available Moves:**
@@ -603,7 +612,7 @@ must learn to navigate.
 
 #### Player's Team
 1. **slowkinggalar** (HP: 100%) | Type: poison psychic | Item: heavydutyboots | Ability: regenerator | Status: nostatus | Tera: fairy *(Lead)*
-2. **clefable** (HP: 25%) | Type: fairy notype | Item: leftovers | Ability: magicguard | Status: nostatus | Tera: steel
+2. **clefable** (HP: 100%) | Type: fairy notype | Item: leftovers | Ability: magicguard | Status: nostatus | Tera: steel
 3. **hoopaunbound** (HP: 100%) | Type: dark psychic | Item: lifeorb | Ability: magician | Status: nostatus | Tera: fighting
 4. **dragapult** (HP: 100%) | Type: dragon ghost | Item: expertbelt | Ability: clearbody | Status: nostatus | Tera: ghost
 5. **dondozo** (HP: 100%) | Type: notype water | Item: leftovers | Ability: unaware | Status: nostatus | Tera: poison
@@ -637,7 +646,7 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **clefable** (HP: 25%) [nostatus]
+  - Bench 1: **clefable** (HP: 100%) [nostatus]
   - Bench 2: **hoopaunbound** (HP: 100%) [nostatus]
   - Bench 3: **dragapult** (HP: 100%) [nostatus]
   - Bench 4: **dondozo** (HP: 100%) [nostatus]
@@ -663,7 +672,7 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **clefable** (HP: 25%) [nostatus]
+  - Bench 1: **clefable** (HP: 100%) [nostatus]
   - Bench 2: **hoopaunbound** (HP: 100%) [nostatus]
   - Bench 3: **dragapult** (HP: 100%) [nostatus]
   - Bench 4: **dondozo** (HP: 100%) [nostatus]
@@ -689,7 +698,7 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **clefable** (HP: 25%) [nostatus]
+  - Bench 1: **clefable** (HP: 100%) [nostatus]
   - Bench 2: **hoopaunbound** (HP: 100%) [nostatus]
   - Bench 3: **dragapult** (HP: 100%) [nostatus]
   - Bench 4: **dondozo** (HP: 100%) [nostatus]
@@ -708,7 +717,7 @@ must learn to navigate.
 **Opponent Active**: **ribombee** (HP: 1%) | Type: bug fairy | Item: noitem | Status: nostatus | Tera: notype
 
 **Available Switches:**
-  - Bench 1: **clefable** (HP: 25%) [nostatus]
+  - Bench 1: **clefable** (HP: 100%) [nostatus]
   - Bench 2: **hoopaunbound** (HP: 100%) [nostatus]
   - Bench 3: **dragapult** (HP: 100%) [nostatus] <-- CHOSEN
   - Bench 4: **dondozo** (HP: 100%) [nostatus]
@@ -734,7 +743,7 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **clefable** (HP: 25%) [nostatus]
+  - Bench 1: **clefable** (HP: 100%) [nostatus]
   - Bench 2: **hoopaunbound** (HP: 100%) [nostatus]
   - Bench 3: **dondozo** (HP: 100%) [nostatus]
   - Bench 4: **slowkinggalar** (HP: 100%) [par]
@@ -760,7 +769,7 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **clefable** (HP: 25%) [nostatus]
+  - Bench 1: **clefable** (HP: 100%) [nostatus]
   - Bench 2: **hoopaunbound** (HP: 100%) [nostatus]
   - Bench 3: **dondozo** (HP: 100%) [nostatus]
   - Bench 4: **slowkinggalar** (HP: 100%) [par]
@@ -786,7 +795,7 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **clefable** (HP: 25%) [nostatus] <-- CHOSEN
+  - Bench 1: **clefable** (HP: 100%) [nostatus] <-- CHOSEN
   - Bench 2: **hoopaunbound** (HP: 100%) [nostatus]
   - Bench 3: **dondozo** (HP: 100%) [nostatus]
   - Bench 4: **slowkinggalar** (HP: 100%) [par]
@@ -801,7 +810,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used thunderbolt
 
-**Player Active**: **clefable** (HP: 25%) | Type: fairy notype | Item: leftovers | Ability: magicguard | Status: nostatus | Tera: steel | Boosts: SPE-1
+**Player Active**: **clefable** (HP: 100%) | Type: fairy notype | Item: leftovers | Ability: magicguard | Status: nostatus | Tera: steel | Boosts: SPE-1
 **Opponent Active**: **ragingbolt** (HP: 94%) | Type: fairy notype | Item: leftovers | Ability: protosynthesis | Status: brn | Tera: fairy | Boosts: SPA+1, SPD+1
 
 **Available Moves:**
@@ -1485,8 +1494,8 @@ must learn to navigate.
 1. **gholdengo** (HP: 100%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy *(Lead)*
 2. **ironvaliant** (HP: 100%) | Type: fairy fighting | Item: boosterenergy | Ability: quarkdrive | Status: nostatus | Tera: fairy
 3. **irontreads** (HP: 100%) | Type: ground steel | Item: boosterenergy | Ability: quarkdrive | Status: nostatus | Tera: flying
-4. **garchomp** (HP: 84%) | Type: dragon ground | Item: rockyhelmet | Ability: roughskin | Status: nostatus | Tera: steel
-5. **samurotthisui** (HP: 87%) | Type: dark water | Item: assaultvest | Ability: sharpness | Status: nostatus | Tera: dark
+4. **garchomp** (HP: 100%) | Type: dragon ground | Item: rockyhelmet | Ability: roughskin | Status: nostatus | Tera: steel
+5. **samurotthisui** (HP: 100%) | Type: dark water | Item: assaultvest | Ability: sharpness | Status: nostatus | Tera: dark
 6. **dragonite** (HP: 100%) | Type: dragon flying | Item: choiceband | Ability: multiscale | Status: nostatus | Tera: normal
 
 #### Opponent's Team (from Team Preview)
@@ -1519,8 +1528,8 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **ironvaliant** (HP: 100%) [nostatus]
   - Bench 2: **irontreads** (HP: 100%) [nostatus]
-  - Bench 3: **garchomp** (HP: 84%) [nostatus]
-  - Bench 4: **samurotthisui** (HP: 87%) [nostatus]
+  - Bench 3: **garchomp** (HP: 100%) [nostatus]
+  - Bench 4: **samurotthisui** (HP: 100%) [nostatus]
   - Bench 5: **dragonite** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **shadowball**
@@ -1545,8 +1554,8 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **ironvaliant** (HP: 100%) [nostatus]
   - Bench 2: **irontreads** (HP: 100%) [nostatus] <-- CHOSEN
-  - Bench 3: **garchomp** (HP: 84%) [nostatus]
-  - Bench 4: **samurotthisui** (HP: 87%) [nostatus]
+  - Bench 3: **garchomp** (HP: 100%) [nostatus]
+  - Bench 4: **samurotthisui** (HP: 100%) [nostatus]
   - Bench 5: **dragonite** (HP: 100%) [nostatus]
 
 **Decision**: Switch to bench slot 2: Switch to **irontreads**
@@ -1558,7 +1567,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used nomove
 
-**Player Active**: **garchomp** (HP: 84%) | Type: dragon ground | Item: rockyhelmet | Ability: roughskin | Status: nostatus | Tera: steel
+**Player Active**: **garchomp** (HP: 100%) | Type: dragon ground | Item: rockyhelmet | Ability: roughskin | Status: nostatus | Tera: steel
 **Opponent Active**: **kyurem** (HP: 100%) | Type: dragon ice | Ability: pressure | Status: nostatus | Tera: notype
 
 **Available Moves:**
@@ -1571,7 +1580,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **ironvaliant** (HP: 100%) [nostatus]
   - Bench 2: **irontreads** (HP: 100%) [nostatus]
-  - Bench 3: **samurotthisui** (HP: 87%) [nostatus]
+  - Bench 3: **samurotthisui** (HP: 100%) [nostatus]
   - Bench 4: **gholdengo** (HP: 100%) [nostatus]
   - Bench 5: **dragonite** (HP: 100%) [nostatus]
 
@@ -1596,7 +1605,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **ironvaliant** (HP: 100%) [nostatus]
   - Bench 2: **irontreads** (HP: 100%) [nostatus]
-  - Bench 3: **samurotthisui** (HP: 87%) [nostatus]
+  - Bench 3: **samurotthisui** (HP: 100%) [nostatus]
   - Bench 4: **gholdengo** (HP: 100%) [nostatus]
   - Bench 5: **dragonite** (HP: 100%) [nostatus]
 
@@ -1621,7 +1630,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **ironvaliant** (HP: 100%) [nostatus]
   - Bench 2: **irontreads** (HP: 100%) [nostatus]
-  - Bench 3: **samurotthisui** (HP: 87%) [nostatus]
+  - Bench 3: **samurotthisui** (HP: 100%) [nostatus]
   - Bench 4: **gholdengo** (HP: 100%) [nostatus]
   - Bench 5: **dragonite** (HP: 100%) [nostatus] <-- CHOSEN
 
@@ -1634,7 +1643,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used fierydance
 
-**Player Active**: **samurotthisui** (HP: 87%) | Type: dark water | Item: assaultvest | Ability: sharpness | Status: nostatus | Tera: dark
+**Player Active**: **samurotthisui** (HP: 100%) | Type: dark water | Item: assaultvest | Ability: sharpness | Status: nostatus | Tera: dark
 **Opponent Active**: **ironmoth** (HP: 100%) | Type: fire poison | Item: noitem | Ability: quarkdrive | Status: nostatus | Tera: notype | Boosts: SPA+1
 
 **Available Moves:**
@@ -1987,11 +1996,11 @@ must learn to navigate.
 
 #### Player's Team
 1. **dragapult** (HP: 100%) | Type: dragon ghost | Item: leftovers | Ability: infiltrator | Status: nostatus | Tera: ghost *(Lead)*
-2. **moltres** (HP: 45%) | Type: fire flying | Item: heavydutyboots | Ability: flamebody | Status: nostatus | Tera: fairy
+2. **moltres** (HP: 100%) | Type: fire flying | Item: heavydutyboots | Ability: flamebody | Status: nostatus | Tera: fairy
 3. **wochien** (HP: 100%) | Type: dark grass | Item: leftovers | Ability: tabletsofruin | Status: nostatus | Tera: fire
 4. **greattusk** (HP: 100%) | Type: fighting ground | Item: rockyhelmet | Ability: protosynthesis | Status: nostatus | Tera: fire
 5. **ogerponwellspring** (HP: 100%) | Type: grass water | Item: wellspringmask | Ability: waterabsorb | Status: nostatus | Tera: water
-6. **kingambit** (HP: 68%) | Type: dark steel | Item: leftovers | Ability: supremeoverlord | Status: nostatus | Tera: flying
+6. **kingambit** (HP: 100%) | Type: dark steel | Item: leftovers | Ability: supremeoverlord | Status: nostatus | Tera: flying
 
 #### Opponent's Team (from Team Preview)
 1. **ragingbolt**
@@ -2021,11 +2030,11 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **moltres** (HP: 45%) [nostatus]
+  - Bench 1: **moltres** (HP: 100%) [nostatus]
   - Bench 2: **wochien** (HP: 100%) [nostatus]
   - Bench 3: **greattusk** (HP: 100%) [nostatus]
   - Bench 4: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 5: **kingambit** (HP: 68%) [nostatus]
+  - Bench 5: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **dragondance**
 
@@ -2047,11 +2056,11 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **moltres** (HP: 45%) [nostatus]
+  - Bench 1: **moltres** (HP: 100%) [nostatus]
   - Bench 2: **wochien** (HP: 100%) [nostatus] <-- CHOSEN
   - Bench 3: **greattusk** (HP: 100%) [nostatus]
   - Bench 4: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 5: **kingambit** (HP: 68%) [nostatus]
+  - Bench 5: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Switch to bench slot 2: Switch to **wochien**
 
@@ -2062,7 +2071,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used terablast
 
-**Player Active**: **kingambit** (HP: 68%) | Type: dark steel | Item: leftovers | Ability: supremeoverlord | Status: nostatus | Tera: flying
+**Player Active**: **kingambit** (HP: 100%) | Type: dark steel | Item: leftovers | Ability: supremeoverlord | Status: nostatus | Tera: flying
 **Opponent Active**: **ragingbolt** (HP: 100%) | Type: ice notype | Ability: protosynthesis | Status: nostatus | Tera: ice
 
 **Available Moves:**
@@ -2073,7 +2082,7 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **moltres** (HP: 45%) [nostatus]
+  - Bench 1: **moltres** (HP: 100%) [nostatus]
   - Bench 2: **wochien** (HP: 100%) [nostatus]
   - Bench 3: **dragapult** (HP: 82%) [nostatus]
   - Bench 4: **greattusk** (HP: 100%) [nostatus]
@@ -2088,7 +2097,7 @@ must learn to navigate.
 
 *Last turn*: Player used ironhead | Opponent used nomove
 
-**Player Active**: **kingambit** (HP: 68%) | Type: dark steel | Item: leftovers | Ability: supremeoverlord | Status: nostatus | Tera: flying
+**Player Active**: **kingambit** (HP: 100%) | Type: dark steel | Item: leftovers | Ability: supremeoverlord | Status: nostatus | Tera: flying
 **Opponent Active**: **alomomola** (HP: 86%) | Type: notype water | Status: nostatus | Tera: notype
 
 **Available Moves:**
@@ -2099,7 +2108,7 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **moltres** (HP: 45%) [nostatus]
+  - Bench 1: **moltres** (HP: 100%) [nostatus]
   - Bench 2: **wochien** (HP: 100%) [nostatus]
   - Bench 3: **dragapult** (HP: 82%) [nostatus]
   - Bench 4: **greattusk** (HP: 100%) [nostatus] <-- CHOSEN
@@ -2125,11 +2134,11 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **moltres** (HP: 45%) [nostatus]
+  - Bench 1: **moltres** (HP: 100%) [nostatus]
   - Bench 2: **wochien** (HP: 100%) [nostatus]
   - Bench 3: **dragapult** (HP: 82%) [nostatus]
   - Bench 4: **greattusk** (HP: 100%) [nostatus]
-  - Bench 5: **kingambit** (HP: 68%) [nostatus]
+  - Bench 5: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 4: Use **playrough**
 
@@ -2144,11 +2153,11 @@ must learn to navigate.
 **Opponent Active**: **ragingbolt** (HP: 78%) | Type: dragon electric | Ability: protosynthesis | Status: nostatus | Tera: ice
 
 **Available Switches:**
-  - Bench 1: **moltres** (HP: 45%) [nostatus]
+  - Bench 1: **moltres** (HP: 100%) [nostatus]
   - Bench 2: **wochien** (HP: 100%) [nostatus]
   - Bench 3: **dragapult** (HP: 82%) [nostatus]
   - Bench 4: **greattusk** (HP: 100%) [nostatus]
-  - Bench 5: **kingambit** (HP: 68%) [nostatus] <-- CHOSEN
+  - Bench 5: **kingambit** (HP: 100%) [nostatus] <-- CHOSEN
 
 **Decision**: Switch to bench slot 5: Switch to **kingambit**
 
@@ -2170,11 +2179,11 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **moltres** (HP: 45%) [nostatus]
+  - Bench 1: **moltres** (HP: 100%) [nostatus]
   - Bench 2: **dragapult** (HP: 82%) [nostatus]
   - Bench 3: **greattusk** (HP: 100%) [nostatus]
   - Bench 4: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 5: **kingambit** (HP: 68%) [nostatus]
+  - Bench 5: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 2: Use **seedbomb**
 
@@ -2196,11 +2205,11 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **moltres** (HP: 45%) [nostatus]
+  - Bench 1: **moltres** (HP: 100%) [nostatus]
   - Bench 2: **dragapult** (HP: 82%) [nostatus]
   - Bench 3: **greattusk** (HP: 100%) [nostatus]
   - Bench 4: **ogerponwellspring** (HP: 100%) [nostatus] <-- CHOSEN
-  - Bench 5: **kingambit** (HP: 68%) [nostatus]
+  - Bench 5: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Switch to bench slot 4: Switch to **ogerponwellspring**
 
@@ -2211,7 +2220,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used terablast
 
-**Player Active**: **moltres** (HP: 45%) | Type: fire flying | Item: heavydutyboots | Ability: flamebody | Status: nostatus | Tera: fairy
+**Player Active**: **moltres** (HP: 100%) | Type: fire flying | Item: heavydutyboots | Ability: flamebody | Status: nostatus | Tera: fairy
 **Opponent Active**: **ragingbolt** (HP: 100%) | Type: dragon electric | Ability: protosynthesis | Status: nostatus | Tera: ice
 
 **Available Moves:**
@@ -2226,7 +2235,7 @@ must learn to navigate.
   - Bench 2: **dragapult** (HP: 82%) [nostatus]
   - Bench 3: **greattusk** (HP: 100%) [nostatus]
   - Bench 4: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 5: **kingambit** (HP: 68%) [nostatus]
+  - Bench 5: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **flamethrower**
 
@@ -2245,7 +2254,7 @@ must learn to navigate.
   - Bench 2: **dragapult** (HP: 82%) [nostatus]
   - Bench 3: **greattusk** (HP: 100%) [nostatus]
   - Bench 4: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 5: **kingambit** (HP: 68%) [nostatus]
+  - Bench 5: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Switch to bench slot 1: Switch to **wochien**
 
@@ -2270,7 +2279,7 @@ must learn to navigate.
   - Bench 1: **wochien** (HP: 100%) [nostatus]
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 4: **kingambit** (HP: 68%) [nostatus]
+  - Bench 4: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 2: Use **dragondarts**
 
@@ -2295,7 +2304,7 @@ must learn to navigate.
   - Bench 1: **wochien** (HP: 100%) [nostatus]
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 4: **kingambit** (HP: 68%) [nostatus]
+  - Bench 4: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **dragondance**
 
@@ -2320,7 +2329,7 @@ must learn to navigate.
   - Bench 1: **wochien** (HP: 100%) [nostatus]
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 4: **kingambit** (HP: 68%) [nostatus]
+  - Bench 4: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **substitute**
 
@@ -2345,7 +2354,7 @@ must learn to navigate.
   - Bench 1: **wochien** (HP: 100%) [nostatus]
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 4: **kingambit** (HP: 68%) [nostatus]
+  - Bench 4: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 2: Use **dragondarts**
 
@@ -2370,7 +2379,7 @@ must learn to navigate.
   - Bench 1: **wochien** (HP: 100%) [nostatus]
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 4: **kingambit** (HP: 68%) [nostatus]
+  - Bench 4: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **substitute**
 
@@ -2395,7 +2404,7 @@ must learn to navigate.
   - Bench 1: **wochien** (HP: 100%) [nostatus]
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 4: **kingambit** (HP: 68%) [nostatus]
+  - Bench 4: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **substitute**
 
@@ -2420,7 +2429,7 @@ must learn to navigate.
   - Bench 1: **wochien** (HP: 100%) [nostatus]
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 4: **kingambit** (HP: 68%) [nostatus]
+  - Bench 4: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **dragondance**
 
@@ -2445,7 +2454,7 @@ must learn to navigate.
   - Bench 1: **wochien** (HP: 100%) [nostatus]
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 4: **kingambit** (HP: 68%) [nostatus]
+  - Bench 4: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **substitute**
 
@@ -2470,7 +2479,7 @@ must learn to navigate.
   - Bench 1: **wochien** (HP: 100%) [nostatus]
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 4: **kingambit** (HP: 68%) [nostatus]
+  - Bench 4: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **dragondance**
 
@@ -2495,7 +2504,7 @@ must learn to navigate.
   - Bench 1: **wochien** (HP: 100%) [nostatus]
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 4: **kingambit** (HP: 68%) [nostatus]
+  - Bench 4: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **substitute**
 
@@ -2520,7 +2529,7 @@ must learn to navigate.
   - Bench 1: **wochien** (HP: 100%) [nostatus]
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 4: **kingambit** (HP: 68%) [nostatus]
+  - Bench 4: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **dragondance**
 
@@ -2545,7 +2554,7 @@ must learn to navigate.
   - Bench 1: **wochien** (HP: 100%) [nostatus]
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 4: **kingambit** (HP: 68%) [nostatus]
+  - Bench 4: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Move 2: Use **dragondarts**
 
@@ -2570,7 +2579,7 @@ must learn to navigate.
   - Bench 1: **wochien** (HP: 100%) [nostatus]
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **ogerponwellspring** (HP: 100%) [nostatus]
-  - Bench 4: **kingambit** (HP: 68%) [nostatus]
+  - Bench 4: **kingambit** (HP: 100%) [nostatus]
 
 **Decision**: Action -1: Use **uturn**
 
@@ -3161,7 +3170,7 @@ must learn to navigate.
 3. **greattusk** (HP: 100%) | Type: fighting ground | Item: rockyhelmet | Ability: protosynthesis | Status: nostatus | Tera: steel
 4. **skeledirge** (HP: 100%) | Type: fire ghost | Item: leftovers | Ability: unaware | Status: nostatus | Tera: fairy
 5. **dragapult** (HP: 100%) | Type: dragon ghost | Item: choiceband | Ability: infiltrator | Status: nostatus | Tera: ghost
-6. **alomomola** (HP: 82%) | Type: notype water | Item: heavydutyboots | Ability: regenerator | Status: nostatus | Tera: fairy
+6. **alomomola** (HP: 100%) | Type: notype water | Item: heavydutyboots | Ability: regenerator | Status: nostatus | Tera: fairy
 
 #### Opponent's Team (from Team Preview)
 1. **dragapult**
@@ -3195,7 +3204,7 @@ must learn to navigate.
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **skeledirge** (HP: 100%) [nostatus]
   - Bench 4: **dragapult** (HP: 100%) [nostatus]
-  - Bench 5: **alomomola** (HP: 82%) [nostatus]
+  - Bench 5: **alomomola** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **lightscreen**
 
@@ -3221,7 +3230,7 @@ must learn to navigate.
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **skeledirge** (HP: 100%) [nostatus]
   - Bench 4: **dragapult** (HP: 100%) [nostatus]
-  - Bench 5: **alomomola** (HP: 82%) [nostatus] <-- CHOSEN
+  - Bench 5: **alomomola** (HP: 100%) [nostatus] <-- CHOSEN
 
 **Decision**: Switch to bench slot 5: Switch to **alomomola**
 
@@ -3247,7 +3256,7 @@ must learn to navigate.
   - Bench 2: **grimmsnarl** (HP: 54%) [nostatus]
   - Bench 3: **greattusk** (HP: 100%) [nostatus]
   - Bench 4: **dragapult** (HP: 100%) [nostatus]
-  - Bench 5: **alomomola** (HP: 82%) [nostatus]
+  - Bench 5: **alomomola** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **slackoff**
 
@@ -3273,7 +3282,7 @@ must learn to navigate.
   - Bench 2: **grimmsnarl** (HP: 54%) [nostatus]
   - Bench 3: **greattusk** (HP: 100%) [nostatus]
   - Bench 4: **dragapult** (HP: 100%) [nostatus]
-  - Bench 5: **alomomola** (HP: 82%) [nostatus]
+  - Bench 5: **alomomola** (HP: 100%) [nostatus]
 
 **Decision**: Move 4: Use **hex**
 
@@ -3299,7 +3308,7 @@ must learn to navigate.
   - Bench 2: **grimmsnarl** (HP: 54%) [nostatus]
   - Bench 3: **greattusk** (HP: 100%) [nostatus]
   - Bench 4: **dragapult** (HP: 100%) [nostatus] <-- CHOSEN
-  - Bench 5: **alomomola** (HP: 82%) [nostatus]
+  - Bench 5: **alomomola** (HP: 100%) [nostatus]
 
 **Decision**: Switch to bench slot 4: Switch to **dragapult**
 
@@ -3325,7 +3334,7 @@ must learn to navigate.
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **skeledirge** (HP: 81%) [nostatus]
   - Bench 4: **dragapult** (HP: 100%) [nostatus]
-  - Bench 5: **alomomola** (HP: 82%) [nostatus]
+  - Bench 5: **alomomola** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **thunderwave**
 
@@ -3351,7 +3360,7 @@ must learn to navigate.
   - Bench 2: **greattusk** (HP: 100%) [nostatus]
   - Bench 3: **skeledirge** (HP: 81%) [nostatus]
   - Bench 4: **dragapult** (HP: 100%) [nostatus]
-  - Bench 5: **alomomola** (HP: 82%) [nostatus]
+  - Bench 5: **alomomola** (HP: 100%) [nostatus]
 
 **Decision**: Switch to bench slot 1: Switch to **roaringmoon**
 
@@ -3362,7 +3371,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used phantomforce
 
-**Player Active**: **alomomola** (HP: 82%) | Type: notype water | Item: heavydutyboots | Ability: regenerator | Status: nostatus | Tera: fairy
+**Player Active**: **alomomola** (HP: 100%) | Type: notype water | Item: heavydutyboots | Ability: regenerator | Status: nostatus | Tera: fairy
 **Opponent Active**: **basculegion** (HP: 100%) | Type: notype water | Status: nostatus | Tera: water
 
 **Available Moves:**
@@ -3822,9 +3831,9 @@ must learn to navigate.
 1. **darkrai** (HP: 100%) | Type: dark notype | Item: leftovers | Ability: baddreams | Status: nostatus | Tera: poison *(Lead)*
 2. **dragonite** (HP: 100%) | Type: dragon flying | Item: heavydutyboots | Ability: multiscale | Status: nostatus | Tera: flying
 3. **enamorus** (HP: 100%) | Type: fairy flying | Item: choicespecs | Ability: contrary | Status: nostatus | Tera: stellar
-4. **gholdengo** (HP: 94%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy
-5. **greattusk** (HP: 90%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: ground
-6. **tinglu** (HP: 76%) | Type: dark ground | Item: leftovers | Ability: vesselofruin | Status: nostatus | Tera: poison
+4. **gholdengo** (HP: 100%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy
+5. **greattusk** (HP: 100%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: ground
+6. **tinglu** (HP: 100%) | Type: dark ground | Item: leftovers | Ability: vesselofruin | Status: nostatus | Tera: poison
 
 #### Opponent's Team (from Team Preview)
 1. **jirachi**
@@ -3856,9 +3865,9 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
-  - Bench 4: **greattusk** (HP: 90%) [nostatus]
-  - Bench 5: **tinglu** (HP: 76%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
+  - Bench 4: **greattusk** (HP: 100%) [nostatus]
+  - Bench 5: **tinglu** (HP: 100%) [nostatus]
 
 **Decision**: Move 4: Use **darkpulse**
 
@@ -3882,9 +3891,9 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
-  - Bench 4: **greattusk** (HP: 90%) [nostatus]
-  - Bench 5: **tinglu** (HP: 76%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
+  - Bench 4: **greattusk** (HP: 100%) [nostatus]
+  - Bench 5: **tinglu** (HP: 100%) [nostatus]
 
 **Decision**: Move 4: Use **darkpulse**
 
@@ -3908,9 +3917,9 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
-  - Bench 4: **greattusk** (HP: 90%) [nostatus]
-  - Bench 5: **tinglu** (HP: 76%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
+  - Bench 4: **greattusk** (HP: 100%) [nostatus]
+  - Bench 5: **tinglu** (HP: 100%) [nostatus]
 
 **Decision**: Action -1: Use **darkpulse**
 
@@ -3934,9 +3943,9 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
-  - Bench 4: **greattusk** (HP: 90%) [nostatus] <-- CHOSEN
-  - Bench 5: **tinglu** (HP: 76%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
+  - Bench 4: **greattusk** (HP: 100%) [nostatus] <-- CHOSEN
+  - Bench 5: **tinglu** (HP: 100%) [nostatus]
 
 **Decision**: Switch to bench slot 4: Switch to **greattusk**
 
@@ -3947,7 +3956,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used ironhead
 
-**Player Active**: **greattusk** (HP: 90%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: ground
+**Player Active**: **greattusk** (HP: 100%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: ground
 **Opponent Active**: **jirachi** (HP: 76%) | Type: psychic steel | Ability: serenegrace | Status: brn | Tera: notype
 
 **Available Moves:**
@@ -3961,8 +3970,8 @@ must learn to navigate.
   - Bench 1: **darkrai** (HP: 82%) [par]
   - Bench 2: **dragonite** (HP: 100%) [nostatus]
   - Bench 3: **enamorus** (HP: 100%) [nostatus]
-  - Bench 4: **gholdengo** (HP: 94%) [nostatus]
-  - Bench 5: **tinglu** (HP: 76%) [nostatus]
+  - Bench 4: **gholdengo** (HP: 100%) [nostatus]
+  - Bench 5: **tinglu** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **icespinner**
 
@@ -3973,7 +3982,7 @@ must learn to navigate.
 
 *Last turn*: Player used knockoff | Opponent used nomove
 
-**Player Active**: **greattusk** (HP: 90%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: ground
+**Player Active**: **greattusk** (HP: 100%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: ground
 **Opponent Active**: **polteageist** (HP: 1%) | Type: ghost notype | Item: noitem | Ability: weakarmor | Status: nostatus | Tera: notype | Boosts: DEF-1, SPE+2
 
 **Available Moves:**
@@ -3987,8 +3996,8 @@ must learn to navigate.
   - Bench 1: **darkrai** (HP: 82%) [par]
   - Bench 2: **dragonite** (HP: 100%) [nostatus]
   - Bench 3: **enamorus** (HP: 100%) [nostatus]
-  - Bench 4: **gholdengo** (HP: 94%) [nostatus]
-  - Bench 5: **tinglu** (HP: 76%) [nostatus] <-- CHOSEN
+  - Bench 4: **gholdengo** (HP: 100%) [nostatus]
+  - Bench 5: **tinglu** (HP: 100%) [nostatus] <-- CHOSEN
 
 **Decision**: Switch to bench slot 5: Switch to **tinglu**
 
@@ -3999,7 +4008,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used gigadrain
 
-**Player Active**: **tinglu** (HP: 76%) | Type: dark ground | Item: leftovers | Ability: vesselofruin | Status: nostatus | Tera: poison
+**Player Active**: **tinglu** (HP: 100%) | Type: dark ground | Item: leftovers | Ability: vesselofruin | Status: nostatus | Tera: poison
 **Opponent Active**: **polteageist** (HP: 25%) | Type: ghost notype | Item: noitem | Ability: weakarmor | Status: nostatus | Tera: notype | Boosts: DEF-1, SPE+2
 
 **Available Moves:**
@@ -4013,8 +4022,8 @@ must learn to navigate.
   - Bench 1: **darkrai** (HP: 82%) [par]
   - Bench 2: **dragonite** (HP: 100%) [nostatus]
   - Bench 3: **enamorus** (HP: 100%) [nostatus]
-  - Bench 4: **gholdengo** (HP: 94%) [nostatus]
-  - Bench 5: **greattusk** (HP: 90%) [nostatus]
+  - Bench 4: **gholdengo** (HP: 100%) [nostatus]
+  - Bench 5: **greattusk** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **ruination**
 
@@ -4039,8 +4048,8 @@ must learn to navigate.
   - Bench 1: **darkrai** (HP: 82%) [par]
   - Bench 2: **dragonite** (HP: 100%) [nostatus]
   - Bench 3: **enamorus** (HP: 100%) [nostatus]
-  - Bench 4: **gholdengo** (HP: 94%) [nostatus]
-  - Bench 5: **greattusk** (HP: 90%) [nostatus]
+  - Bench 4: **gholdengo** (HP: 100%) [nostatus]
+  - Bench 5: **greattusk** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **stealthrock**
 
@@ -4065,8 +4074,8 @@ must learn to navigate.
   - Bench 1: **darkrai** (HP: 82%) [par] <-- CHOSEN
   - Bench 2: **dragonite** (HP: 100%) [nostatus]
   - Bench 3: **enamorus** (HP: 100%) [nostatus]
-  - Bench 4: **gholdengo** (HP: 94%) [nostatus]
-  - Bench 5: **greattusk** (HP: 90%) [nostatus]
+  - Bench 4: **gholdengo** (HP: 100%) [nostatus]
+  - Bench 5: **greattusk** (HP: 100%) [nostatus]
 
 **Decision**: Switch to bench slot 1: Switch to **darkrai**
 
@@ -4083,8 +4092,8 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus] <-- CHOSEN
-  - Bench 4: **greattusk** (HP: 90%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus] <-- CHOSEN
+  - Bench 4: **greattusk** (HP: 100%) [nostatus]
   - Bench 5: **tinglu** (HP: 42%) [nostatus]
 
 **Decision**: Switch to bench slot 3: Switch to **gholdengo**
@@ -4096,7 +4105,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used crabhammer
 
-**Player Active**: **gholdengo** (HP: 94%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy
+**Player Active**: **gholdengo** (HP: 100%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy
 **Opponent Active**: **crawdaunt** (HP: 78%) | Type: dark water | Item: lifeorb | Status: nostatus | Tera: notype
 
 **Available Moves:**
@@ -4109,7 +4118,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **greattusk** (HP: 90%) [nostatus]
+  - Bench 3: **greattusk** (HP: 100%) [nostatus]
   - Bench 4: **tinglu** (HP: 42%) [nostatus]
 
 **Decision**: Move 1: Use **makeitrain**
@@ -4121,7 +4130,7 @@ must learn to navigate.
 
 *Last turn*: Player used makeitrain | Opponent used nomove
 
-**Player Active**: **gholdengo** (HP: 94%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy | Boosts: SPA-1
+**Player Active**: **gholdengo** (HP: 100%) | Type: ghost steel | Item: airballoon | Ability: goodasgold | Status: nostatus | Tera: fairy | Boosts: SPA-1
 **Opponent Active**: **greattusk** (HP: 100%) | Type: fighting ground | Ability: protosynthesis | Status: nostatus | Tera: notype
 
 **Available Moves:**
@@ -4134,7 +4143,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **greattusk** (HP: 90%) [nostatus]
+  - Bench 3: **greattusk** (HP: 100%) [nostatus]
   - Bench 4: **tinglu** (HP: 42%) [nostatus] <-- CHOSEN
 
 **Decision**: Switch to bench slot 4: Switch to **tinglu**
@@ -4159,8 +4168,8 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
-  - Bench 4: **greattusk** (HP: 90%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
+  - Bench 4: **greattusk** (HP: 100%) [nostatus]
 
 **Decision**: Move 2: Use **earthquake**
 
@@ -4184,8 +4193,8 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
-  - Bench 4: **greattusk** (HP: 90%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
+  - Bench 4: **greattusk** (HP: 100%) [nostatus]
 
 **Decision**: Action -1: Use **whirlwind**
 
@@ -4202,8 +4211,8 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
-  - Bench 4: **greattusk** (HP: 90%) [nostatus] <-- CHOSEN
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
+  - Bench 4: **greattusk** (HP: 100%) [nostatus] <-- CHOSEN
 
 **Decision**: Switch to bench slot 4: Switch to **greattusk**
 
@@ -4214,7 +4223,7 @@ must learn to navigate.
 
 *Last turn*: Player used knockoff | Opponent used icespinner
 
-**Player Active**: **greattusk** (HP: 90%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: ground
+**Player Active**: **greattusk** (HP: 100%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: ground
 **Opponent Active**: **greattusk** (HP: 51%) | Type: fighting ground | Ability: protosynthesis | Status: nostatus | Tera: notype | Boosts: SPE+1
 
 **Available Moves:**
@@ -4227,7 +4236,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
 
 **Decision**: Move 4: Use **headlongrush**
 
@@ -4238,7 +4247,7 @@ must learn to navigate.
 
 *Last turn*: Player used rapidspin | Opponent used bulkup
 
-**Player Active**: **greattusk** (HP: 90%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: ground | Boosts: SPE+1
+**Player Active**: **greattusk** (HP: 100%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: ground | Boosts: SPE+1
 **Opponent Active**: **greattusk** (HP: 43%) | Type: fighting ground | Ability: protosynthesis | Status: nostatus | Tera: notype | Boosts: ATK+1, DEF+1, SPE+1
 
 **Available Moves:**
@@ -4251,7 +4260,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
 
 **Decision**: Move 2: Use **rapidspin**
 
@@ -4275,7 +4284,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
 
 **Decision**: Move 2: Use **rapidspin**
 
@@ -4299,7 +4308,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **icespinner**
 
@@ -4323,7 +4332,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
 
 **Decision**: Move 2: Use **rapidspin**
 
@@ -4347,7 +4356,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **knockoff**
 
@@ -4371,7 +4380,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
 
 **Decision**: Move 4: Use **headlongrush**
 
@@ -4395,7 +4404,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **icespinner**
 
@@ -4419,7 +4428,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus]
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **knockoff**
 
@@ -4436,7 +4445,7 @@ must learn to navigate.
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
   - Bench 2: **enamorus** (HP: 100%) [nostatus] <-- CHOSEN
-  - Bench 3: **gholdengo** (HP: 94%) [nostatus]
+  - Bench 3: **gholdengo** (HP: 100%) [nostatus]
 
 **Decision**: Switch to bench slot 2: Switch to **enamorus**
 
@@ -4459,7 +4468,7 @@ must learn to navigate.
 
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
-  - Bench 2: **gholdengo** (HP: 94%) [nostatus]
+  - Bench 2: **gholdengo** (HP: 100%) [nostatus]
 
 **Decision**: Move 4: Use **healingwish**
 
@@ -4482,7 +4491,7 @@ must learn to navigate.
 
 **Available Switches:**
   - Bench 1: **dragonite** (HP: 100%) [nostatus]
-  - Bench 2: **gholdengo** (HP: 94%) [nostatus]
+  - Bench 2: **gholdengo** (HP: 100%) [nostatus]
 
 **Decision**: Action -1: Use **healingwish**
 
@@ -4498,10 +4507,10 @@ must learn to navigate.
 
 #### Player's Team
 1. **ribombee** (HP: 100%) | Type: bug fairy | Item: focussash | Ability: shielddust | Status: nostatus | Tera: ghost *(Lead)*
-2. **greattusk** (HP: 93%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: water
-3. **dondozo** (HP: 68%) | Type: notype water | Item: leftovers | Ability: unaware | Status: nostatus | Tera: dragon
-4. **goodrahisui** (HP: 95%) | Type: dragon steel | Item: heavydutyboots | Ability: sapsipper | Status: nostatus | Tera: flying
-5. **milotic** (HP: 70%) | Type: notype water | Item: leftovers | Ability: marvelscale | Status: nostatus | Tera: fairy
+2. **greattusk** (HP: 100%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: water
+3. **dondozo** (HP: 100%) | Type: notype water | Item: leftovers | Ability: unaware | Status: nostatus | Tera: dragon
+4. **goodrahisui** (HP: 100%) | Type: dragon steel | Item: heavydutyboots | Ability: sapsipper | Status: nostatus | Tera: flying
+5. **milotic** (HP: 100%) | Type: notype water | Item: leftovers | Ability: marvelscale | Status: nostatus | Tera: fairy
 6. **salazzle** (HP: 100%) | Type: fire poison | Item: focussash | Ability: corrosion | Status: nostatus | Tera: ground
 
 #### Opponent's Team (from Team Preview)
@@ -4532,10 +4541,10 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
-  - Bench 3: **goodrahisui** (HP: 95%) [nostatus]
-  - Bench 4: **milotic** (HP: 70%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
+  - Bench 3: **goodrahisui** (HP: 100%) [nostatus]
+  - Bench 4: **milotic** (HP: 100%) [nostatus]
   - Bench 5: **salazzle** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **moonblast**
@@ -4558,10 +4567,10 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
-  - Bench 3: **goodrahisui** (HP: 95%) [nostatus]
-  - Bench 4: **milotic** (HP: 70%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
+  - Bench 3: **goodrahisui** (HP: 100%) [nostatus]
+  - Bench 4: **milotic** (HP: 100%) [nostatus]
   - Bench 5: **salazzle** (HP: 100%) [nostatus] <-- CHOSEN
 
 **Decision**: Switch to bench slot 5: Switch to **salazzle**
@@ -4584,11 +4593,11 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
   - Bench 3: **ribombee** (HP: 100%) [nostatus]
-  - Bench 4: **goodrahisui** (HP: 95%) [nostatus]
-  - Bench 5: **milotic** (HP: 70%) [nostatus]
+  - Bench 4: **goodrahisui** (HP: 100%) [nostatus]
+  - Bench 5: **milotic** (HP: 100%) [nostatus]
 
 **Decision**: Move 4: Use **flamethrower**
 
@@ -4610,11 +4619,11 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
   - Bench 3: **ribombee** (HP: 100%) [nostatus]
-  - Bench 4: **goodrahisui** (HP: 95%) [nostatus]
-  - Bench 5: **milotic** (HP: 70%) [nostatus]
+  - Bench 4: **goodrahisui** (HP: 100%) [nostatus]
+  - Bench 5: **milotic** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **toxic**
 
@@ -4636,11 +4645,11 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
   - Bench 3: **ribombee** (HP: 100%) [nostatus]
-  - Bench 4: **goodrahisui** (HP: 95%) [nostatus]
-  - Bench 5: **milotic** (HP: 70%) [nostatus]
+  - Bench 4: **goodrahisui** (HP: 100%) [nostatus]
+  - Bench 5: **milotic** (HP: 100%) [nostatus]
 
 **Decision**: Action -1: Use **flamethrower**
 
@@ -4655,11 +4664,11 @@ must learn to navigate.
 **Opponent Active**: **deoxysspeed** (HP: 100%) | Type: notype psychic | Ability: pressure | Status: nostatus | Tera: notype
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
   - Bench 3: **ribombee** (HP: 100%) [nostatus]
-  - Bench 4: **goodrahisui** (HP: 95%) [nostatus]
-  - Bench 5: **milotic** (HP: 70%) [nostatus] <-- CHOSEN
+  - Bench 4: **goodrahisui** (HP: 100%) [nostatus]
+  - Bench 5: **milotic** (HP: 100%) [nostatus] <-- CHOSEN
 
 **Decision**: Switch to bench slot 5: Switch to **milotic**
 
@@ -4681,10 +4690,10 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
-  - Bench 3: **goodrahisui** (HP: 95%) [nostatus]
-  - Bench 4: **milotic** (HP: 70%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
+  - Bench 3: **goodrahisui** (HP: 100%) [nostatus]
+  - Bench 4: **milotic** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **moonblast**
 
@@ -4706,10 +4715,10 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
-  - Bench 3: **goodrahisui** (HP: 95%) [nostatus]
-  - Bench 4: **milotic** (HP: 70%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
+  - Bench 3: **goodrahisui** (HP: 100%) [nostatus]
+  - Bench 4: **milotic** (HP: 100%) [nostatus]
 
 **Decision**: Move 1: Use **moonblast**
 
@@ -4731,10 +4740,10 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
-  - Bench 3: **goodrahisui** (HP: 95%) [nostatus]
-  - Bench 4: **milotic** (HP: 70%) [nostatus] <-- CHOSEN
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
+  - Bench 3: **goodrahisui** (HP: 100%) [nostatus]
+  - Bench 4: **milotic** (HP: 100%) [nostatus] <-- CHOSEN
 
 **Decision**: Switch to bench slot 4: Switch to **milotic**
 
@@ -4745,7 +4754,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used nomove
 
-**Player Active**: **milotic** (HP: 70%) | Type: notype water | Item: leftovers | Ability: marvelscale | Status: nostatus | Tera: fairy
+**Player Active**: **milotic** (HP: 100%) | Type: notype water | Item: leftovers | Ability: marvelscale | Status: nostatus | Tera: fairy
 **Opponent Active**: **samurotthisui** (HP: 100%) | Type: dark water | Status: nostatus | Tera: notype
 
 **Available Moves:**
@@ -4756,10 +4765,10 @@ must learn to navigate.
   - *Terastallize available* (can use Tera + any move)
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
   - Bench 3: **ribombee** (HP: 76%) [nostatus]
-  - Bench 4: **goodrahisui** (HP: 95%) [nostatus]
+  - Bench 4: **goodrahisui** (HP: 100%) [nostatus]
 
 **Decision**: Tera + Move 1: Terastallize + Use **alluringvoice**
 
@@ -4780,10 +4789,10 @@ must learn to navigate.
   - Slot 4: **icebeam** [ice] (special) BP:90 PP:16/16
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus] <-- CHOSEN
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus] <-- CHOSEN
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
   - Bench 3: **ribombee** (HP: 76%) [nostatus]
-  - Bench 4: **goodrahisui** (HP: 95%) [nostatus]
+  - Bench 4: **goodrahisui** (HP: 100%) [nostatus]
 
 **Decision**: Switch to bench slot 1: Switch to **greattusk**
 
@@ -4794,7 +4803,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used headlongrush
 
-**Player Active**: **dondozo** (HP: 68%) | Type: notype water | Item: leftovers | Ability: unaware | Status: nostatus | Tera: dragon
+**Player Active**: **dondozo** (HP: 100%) | Type: notype water | Item: leftovers | Ability: unaware | Status: nostatus | Tera: dragon
 **Opponent Active**: **greattusk** (HP: 100%) | Type: fighting ground | Ability: protosynthesis | Status: nostatus | Tera: notype | Boosts: DEF-1, SPD-1
 
 **Available Moves:**
@@ -4804,9 +4813,9 @@ must learn to navigate.
   - Slot 4: **wavecrash** [water] (physical) BP:120 PP:16/16
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
   - Bench 2: **ribombee** (HP: 76%) [nostatus]
-  - Bench 3: **goodrahisui** (HP: 95%) [nostatus]
+  - Bench 3: **goodrahisui** (HP: 100%) [nostatus]
   - Bench 4: **milotic** (HP: 42%) [nostatus] <-- CHOSEN
 
 **Decision**: Switch to bench slot 4: Switch to **milotic**
@@ -4828,9 +4837,9 @@ must learn to navigate.
   - Slot 4: **skillswap** [psychic] (status) PP:16/16 <-- CHOSEN
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
-  - Bench 3: **goodrahisui** (HP: 95%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
+  - Bench 3: **goodrahisui** (HP: 100%) [nostatus]
   - Bench 4: **milotic** (HP: 42%) [nostatus]
 
 **Decision**: Move 4: Use **skillswap**
@@ -4852,9 +4861,9 @@ must learn to navigate.
   - Slot 4: **skillswap** [psychic] (status) PP:16/16
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
-  - Bench 3: **goodrahisui** (HP: 95%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
+  - Bench 3: **goodrahisui** (HP: 100%) [nostatus]
   - Bench 4: **milotic** (HP: 42%) [nostatus]
 
 **Decision**: Move 3: Use **stickyweb**
@@ -4870,9 +4879,9 @@ must learn to navigate.
 **Opponent Active**: **moltres** (HP: 100%) | Type: fire flying | Status: par | Tera: notype
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
-  - Bench 3: **goodrahisui** (HP: 95%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
+  - Bench 3: **goodrahisui** (HP: 100%) [nostatus]
   - Bench 4: **milotic** (HP: 42%) [nostatus] <-- CHOSEN
 
 **Decision**: Switch to bench slot 4: Switch to **milotic**
@@ -4894,9 +4903,9 @@ must learn to navigate.
   - Slot 4: **icebeam** [ice] (special) BP:90 PP:16/16 <-- CHOSEN
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
-  - Bench 3: **goodrahisui** (HP: 95%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
+  - Bench 3: **goodrahisui** (HP: 100%) [nostatus]
 
 **Decision**: Move 4: Use **icebeam**
 
@@ -4917,9 +4926,9 @@ must learn to navigate.
   - Slot 4: **icebeam** [ice] (special) BP:90 PP:16/16 <-- CHOSEN
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
-  - Bench 3: **goodrahisui** (HP: 95%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
+  - Bench 3: **goodrahisui** (HP: 100%) [nostatus]
 
 **Decision**: Move 4: Use **icebeam**
 
@@ -4940,9 +4949,9 @@ must learn to navigate.
   - Slot 4: **icebeam** [ice] (special) BP:90 PP:16/16
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus] <-- CHOSEN
-  - Bench 3: **goodrahisui** (HP: 95%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus] <-- CHOSEN
+  - Bench 3: **goodrahisui** (HP: 100%) [nostatus]
 
 **Decision**: Switch to bench slot 2: Switch to **dondozo**
 
@@ -4953,7 +4962,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used calmmind
 
-**Player Active**: **goodrahisui** (HP: 95%) | Type: dragon steel | Item: heavydutyboots | Ability: sapsipper | Status: nostatus | Tera: flying
+**Player Active**: **goodrahisui** (HP: 100%) | Type: dragon steel | Item: heavydutyboots | Ability: sapsipper | Status: nostatus | Tera: flying
 **Opponent Active**: **sinistcha** (HP: 100%) | Type: ghost grass | Status: nostatus | Tera: notype | Boosts: SPA+1, SPD+1
 
 **Available Moves:**
@@ -4963,8 +4972,8 @@ must learn to navigate.
   - Slot 4: **dragontail** [dragon] (physical) BP:60 Priority:-6 PP:16/16
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
   - Bench 3: **milotic** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **heavyslam**
@@ -4986,8 +4995,8 @@ must learn to navigate.
   - Slot 4: **dragontail** [dragon] (physical) BP:60 Priority:-6 PP:16/16
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
   - Bench 3: **milotic** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **heavyslam**
@@ -5009,8 +5018,8 @@ must learn to navigate.
   - Slot 4: **dragontail** [dragon] (physical) BP:60 Priority:-6 PP:16/16
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus]
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus]
   - Bench 3: **milotic** (HP: 100%) [nostatus]
 
 **Decision**: Move 3: Use **heavyslam**
@@ -5032,8 +5041,8 @@ must learn to navigate.
   - Slot 4: **dragontail** [dragon] (physical) BP:60 Priority:-6 PP:16/16
 
 **Available Switches:**
-  - Bench 1: **greattusk** (HP: 93%) [nostatus]
-  - Bench 2: **dondozo** (HP: 68%) [nostatus] <-- CHOSEN
+  - Bench 1: **greattusk** (HP: 100%) [nostatus]
+  - Bench 2: **dondozo** (HP: 100%) [nostatus] <-- CHOSEN
   - Bench 3: **milotic** (HP: 100%) [nostatus]
 
 **Decision**: Switch to bench slot 2: Switch to **dondozo**
@@ -5045,7 +5054,7 @@ must learn to navigate.
 
 *Last turn*: Player used nomove | Opponent used knockoff
 
-**Player Active**: **greattusk** (HP: 93%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: water
+**Player Active**: **greattusk** (HP: 100%) | Type: fighting ground | Item: boosterenergy | Ability: protosynthesis | Status: nostatus | Tera: water
 **Opponent Active**: **greattusk** (HP: 100%) | Type: fighting ground | Ability: protosynthesis | Status: nostatus | Tera: notype | Boosts: SPE-1
 
 **Available Moves:**
@@ -5055,7 +5064,7 @@ must learn to navigate.
   - Slot 4: **bulkup** [fighting] (status) PP:32/32 <-- CHOSEN
 
 **Available Switches:**
-  - Bench 1: **dondozo** (HP: 68%) [nostatus]
+  - Bench 1: **dondozo** (HP: 100%) [nostatus]
   - Bench 2: **goodrahisui** (HP: 6%) [nostatus]
   - Bench 3: **milotic** (HP: 100%) [nostatus]
 
@@ -5078,7 +5087,7 @@ must learn to navigate.
   - Slot 4: **bulkup** [fighting] (status) PP:32/32
 
 **Available Switches:**
-  - Bench 1: **dondozo** (HP: 68%) [nostatus]
+  - Bench 1: **dondozo** (HP: 100%) [nostatus]
   - Bench 2: **goodrahisui** (HP: 6%) [nostatus]
   - Bench 3: **milotic** (HP: 100%) [nostatus]
 
@@ -5101,7 +5110,7 @@ must learn to navigate.
   - Slot 4: **bulkup** [fighting] (status) PP:32/32
 
 **Available Switches:**
-  - Bench 1: **dondozo** (HP: 68%) [nostatus] <-- CHOSEN
+  - Bench 1: **dondozo** (HP: 100%) [nostatus] <-- CHOSEN
   - Bench 2: **goodrahisui** (HP: 6%) [nostatus]
   - Bench 3: **milotic** (HP: 100%) [nostatus]
 
