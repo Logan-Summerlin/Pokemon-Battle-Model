@@ -490,3 +490,51 @@ def load_battles_from_directory(
             continue
 
     return battles
+
+
+def iter_battles_from_directory(
+    directory: str | Path,
+    max_battles: int | None = None,
+    elo_threshold: int = 0,
+) -> Iterator[ParsedBattle]:
+    """Yield battles one at a time from a directory of .json or .json.lz4 files.
+
+    Memory-efficient alternative to load_battles_from_directory for large datasets.
+
+    Args:
+        directory: Path to directory containing battle files.
+        max_battles: Maximum number of battles to yield.
+        elo_threshold: Minimum Elo to include.
+
+    Yields:
+        ParsedBattle objects.
+    """
+    directory = Path(directory)
+    count = 0
+
+    files = sorted(directory.glob("*.json*"))
+    for filepath in files:
+        if max_battles is not None and count >= max_battles:
+            break
+
+        if not (filepath.suffix == ".json" or filepath.name.endswith(".json.lz4")):
+            continue
+
+        # Quick Elo filter
+        if elo_threshold > 0:
+            meta = parse_filename_metadata(filepath.name)
+            try:
+                elo = int(meta.get("elo", "0") or "0")
+                if elo < elo_threshold:
+                    continue
+            except ValueError:
+                continue
+
+        try:
+            battle = load_battle_from_file(filepath)
+            if battle.is_valid():
+                count += 1
+                yield battle
+        except Exception as e:
+            logger.warning(f"Error loading {filepath}: {e}")
+            continue
