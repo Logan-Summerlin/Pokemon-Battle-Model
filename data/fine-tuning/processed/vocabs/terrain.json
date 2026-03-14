@@ -1,0 +1,14 @@
+{
+  "name": "terrain",
+  "tokens": {
+    "": 0,
+    "unknown": 1,
+    "nofield": 2,
+    "psychicterrain": 3,
+    "grassyterrain": 4,
+    "electricterrain": 5,
+    "trickroom": 6,
+    "mistyterrain": 7
+  },
+  "frozen": true
+}

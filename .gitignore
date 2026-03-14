@@ -26,6 +26,11 @@ data/raw/*.tar.gz
 data/processed/*.parquet
 data/processed/*.bin
 
+# Fine-tuning data - raw replays and processed battles tracked for reproducibility
+# data/fine-tuning/raw/*.json.lz4  -- tracked in git (300 replays, separate from training)
+# data/fine-tuning/processed/battles/*.npz  -- tracked in git
+# data/fine-tuning/splits/  -- tracked in git
+
 # Checkpoints (large model files - baseline checkpoints tracked)
 # checkpoints/baseline_mlp/ and checkpoints/baseline_gru/ are tracked
 checkpoints/transformer/
