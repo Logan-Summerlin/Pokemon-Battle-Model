@@ -40,6 +40,7 @@ def parse_args() -> argparse.Namespace:
 def _load_model(checkpoint_path: Path, device: torch.device) -> BattleTransformer:
     ckpt = torch.load(checkpoint_path, map_location=device)
     raw_cfg: dict[str, Any] = ckpt.get("config", {})
+    state_dict: dict[str, torch.Tensor] = ckpt["model_state_dict"]
 
     # Safe defaults + checkpoint overrides.
     cfg = TransformerConfig.p8_lean()
@@ -47,8 +48,36 @@ def _load_model(checkpoint_path: Path, device: torch.device) -> BattleTransforme
         if hasattr(cfg, k):
             setattr(cfg, k, v)
 
+    # Robustness for checkpoints whose explicit config does not include
+    # max_seq_len (or uses a different value than P8-Lean defaults).
+    # Infer max_seq_len from saved turn positional embedding table.
+    turn_pe_key = "encoder.turn_pos_emb.pe"
+    if turn_pe_key in state_dict and state_dict[turn_pe_key].dim() == 2:
+        ckpt_max_seq = int(state_dict[turn_pe_key].shape[0])
+        if ckpt_max_seq > 0:
+            cfg.max_seq_len = ckpt_max_seq
+
     model = BattleTransformer(cfg).to(device)
-    model.load_state_dict(ckpt["model_state_dict"], strict=False)
+
+    # Filter out any incompatible tensor shapes to avoid load-time crashes
+    # when checkpoint/model configs differ on non-critical buffers.
+    model_state = model.state_dict()
+    filtered_state: dict[str, torch.Tensor] = {}
+    skipped: list[str] = []
+    for k, v in state_dict.items():
+        if k not in model_state:
+            continue
+        if model_state[k].shape != v.shape:
+            skipped.append(k)
+            continue
+        filtered_state[k] = v
+
+    model.load_state_dict(filtered_state, strict=False)
+    if skipped:
+        print(
+            "Warning: skipped incompatible checkpoint tensors: "
+            + ", ".join(sorted(skipped))
+        )
     model.eval()
     return model
 
