@@ -26,7 +26,6 @@ from src.environment.protocol import (
     parse_pokemon_ident,
     parse_side_condition_message,
     parse_switch_message,
-    parse_terastallize_message,
     parse_weather_message,
 )
 
@@ -195,10 +194,6 @@ class TestParseMessage:
         msg = parse_message("|faint|p1a: Pikachu")
         assert msg.msg_type == MessageType.FAINT
 
-    def test_terastallize_message(self) -> None:
-        msg = parse_message("|-terastallize|p1a: Tyranitar|Dark")
-        assert msg.msg_type == MessageType.TERASTALLIZE
-
     def test_sidestart_message(self) -> None:
         msg = parse_message("|-sidestart|p1: Player1|move: Spikes")
         assert msg.msg_type == MessageType.SIDESTART
@@ -276,12 +271,6 @@ class TestSpecializedParsers:
         data = parse_side_condition_message(msg)
         assert data["player"] == "p1"
         assert data["condition"] == "move: Spikes"
-
-    def test_parse_terastallize_message(self) -> None:
-        msg = parse_message("|-terastallize|p1a: Tyranitar|Dark")
-        data = parse_terastallize_message(msg)
-        assert data["target"].name == "Tyranitar"
-        assert data["tera_type"] == "Dark"
 
     def test_parse_poke_message(self) -> None:
         msg = parse_message("|poke|p1|Pikachu, L50, M|item")

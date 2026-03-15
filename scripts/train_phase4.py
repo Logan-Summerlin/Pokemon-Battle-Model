@@ -796,7 +796,7 @@ def main() -> None:
     parser.add_argument(
         "--prune-dead-features",
         action="store_true",
-        help="Drop known dead input channels (e.g., field binary block, terastallized flag) in embeddings.",
+        help="Drop known dead input channels (e.g., field binary block for Gen 4+ features) in embeddings.",
     )
     parser.add_argument(
         "--torch-compile",

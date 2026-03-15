@@ -18,9 +18,8 @@ source:
 
 # Battle format
 battle:
-  format: gen9ou
+  format: gen3ou
   rules:
-    - "Team Preview"
     - "Sleep Clause Mod"
     - "Species Clause"
     - "Evasion Moves Clause"

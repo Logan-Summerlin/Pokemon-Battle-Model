@@ -10,7 +10,6 @@ Covers:
 - Weather, terrain, trick room
 - Side conditions (hazards, screens, tailwind)
 - Item and ability reveals
-- Terastallization tracking
 - Volatile status tracking
 - Win/tie detection
 - First-person only: no hidden state leakage
@@ -76,7 +75,6 @@ class TestTeamPreview:
         opp = tracker.state.opponent_team[0]
         assert opp.item == UNKNOWN
         assert opp.ability == UNKNOWN
-        assert opp.tera_type == UNKNOWN
         assert opp.revealed_moves == []
 
 
@@ -179,7 +177,6 @@ class TestDamageAndHealing:
                         "moves": ["earthquake", "dragondance"],
                         "item": "choiceband",
                         "ability": "Intimidate",
-                        "teraType": "Dragon",
                     }
                 ],
             }
@@ -377,47 +374,6 @@ class TestItemAndAbilityReveals:
         assert tracker.state.opponent_active.ability == "Clear Body"
 
 
-class TestTerastallization:
-    """Test Terastallization tracking.
-
-    Note: Terastallization is a Gen 9 mechanic, but these tests exercise
-    the protocol/state tracker infrastructure which is generation-agnostic.
-    """
-
-    def test_opponent_tera(self) -> None:
-        tracker = _make_tracker()
-        _process_chunk(tracker, """|poke|p2|Tyranitar, L100, M
-|switch|p2a: Tyranitar|Tyranitar, L100, M|100/100
-|-terastallize|p2a: Tyranitar|Dark""")
-
-        opp = tracker.state.opponent_active
-        assert opp.terastallized is True
-        assert opp.tera_type == "Dark"
-        assert tracker.state.opponent_has_terastallized is True
-
-    def test_own_tera_disables_future_tera(self) -> None:
-        tracker = _make_tracker()
-        request = json.dumps({
-            "side": {
-                "id": "p1",
-                "pokemon": [
-                    {
-                        "ident": "p1: Salamence",
-                        "details": "Salamence, L100, M",
-                        "condition": "350/350",
-                        "active": True,
-                        "stats": {},
-                        "moves": [],
-                        "teraType": "Dragon",
-                    }
-                ],
-            }
-        })
-        tracker.update_from_request(request)
-        _process_chunk(tracker, "|-terastallize|p1a: Salamence|Dragon")
-        assert tracker.state.can_terastallize is False
-
-
 class TestVolatileStatuses:
     """Test volatile status tracking."""
 
@@ -480,7 +436,6 @@ class TestRequestProcessing:
                         "item": "choiceband",
                         "ability": "Intimidate",
                         "baseAbility": "Intimidate",
-                        "teraType": "Dragon",
                     },
                     {
                         "ident": "p1: Metagross",
@@ -493,7 +448,6 @@ class TestRequestProcessing:
                         ],
                         "item": "leftovers",
                         "ability": "Clear Body",
-                        "teraType": "",
                     },
                 ],
             }
@@ -571,7 +525,6 @@ class TestFirstPersonInvariant:
         opp = tracker.state.opponent_active
         assert opp.item == UNKNOWN
         assert opp.ability == UNKNOWN
-        assert opp.tera_type == UNKNOWN
         assert len(opp.revealed_moves) == 0
 
     def test_opponent_moves_revealed_incrementally(self) -> None:

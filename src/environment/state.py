@@ -34,7 +34,6 @@ from src.environment.protocol import (
     parse_side_condition_message,
     parse_status_message,
     parse_switch_message,
-    parse_terastallize_message,
     parse_weather_message,
 )
 
@@ -80,8 +79,6 @@ class OwnPokemon:
     status: str = ""  # brn, par, slp, psn, tox, frz, or ""
     item: str = ""
     ability: str = ""
-    tera_type: str = ""
-    terastallized: bool = False
     moves: list[MoveSlot] = dc_field(default_factory=list)
     boosts: dict[str, int] = dc_field(default_factory=dict)
     active: bool = False
@@ -117,8 +114,6 @@ class OpponentPokemon:
     # Revealed information — starts as UNKNOWN
     item: str = UNKNOWN
     ability: str = UNKNOWN
-    tera_type: str = UNKNOWN
-    terastallized: bool = False
     revealed_moves: list[str] = dc_field(default_factory=list)
     boosts: dict[str, int] = dc_field(default_factory=dict)
     active: bool = False
@@ -260,10 +255,6 @@ class BattleState:
     # Team preview info (species seen at preview)
     preview_species: list[str] = dc_field(default_factory=list)
     opponent_preview_species: list[str] = dc_field(default_factory=list)
-
-    # Tera availability
-    can_terastallize: bool = True
-    opponent_has_terastallized: bool = False
 
     # Request data from server (raw, for current decision)
     _current_request: dict[str, Any] = dc_field(default_factory=dict)
@@ -497,12 +488,6 @@ class BattleStateTracker:
             if "baseAbility" in poke_data:
                 if not poke.ability:
                     poke.ability = poke_data["baseAbility"]
-            if "teraType" in poke_data:
-                poke.tera_type = poke_data["teraType"]
-            if "terastallized" in poke_data:
-                if poke_data["terastallized"]:
-                    poke.terastallized = True
-                    self.state.can_terastallize = False
 
     # ── Message handlers ────────────────────────────────────────────────
 
@@ -884,22 +869,6 @@ class BattleStateTracker:
         if self._is_opponent_pokemon(target) and self.state.opponent_active:
             self.state.opponent_active.reveal_ability(ability)
 
-    def _handle_terastallize(self, msg: BattleMessage) -> None:
-        """Handle |-terastallize| message."""
-        data = parse_terastallize_message(msg)
-        target = data.get("target")
-        tera_type = data.get("tera_type", "")
-        if not target:
-            return
-
-        if self._is_our_pokemon(target) and self.state.own_active:
-            self.state.own_active.terastallized = True
-            self.state.can_terastallize = False
-        elif self._is_opponent_pokemon(target) and self.state.opponent_active:
-            self.state.opponent_active.terastallized = True
-            self.state.opponent_active.tera_type = tera_type
-            self.state.opponent_has_terastallized = True
-
     def _handle_start_effect(self, msg: BattleMessage) -> None:
         """Handle |-start| message (volatile status started)."""
         if len(msg.args) < 2:
@@ -997,7 +966,6 @@ _MESSAGE_HANDLERS: dict[MessageType, Any] = {
     MessageType.ITEM: BattleStateTracker._handle_item,
     MessageType.ENDITEM: BattleStateTracker._handle_enditem,
     MessageType.ABILITY: BattleStateTracker._handle_ability,
-    MessageType.TERASTALLIZE: BattleStateTracker._handle_terastallize,
     MessageType.START_EFFECT: BattleStateTracker._handle_start_effect,
     MessageType.END_EFFECT: BattleStateTracker._handle_end_effect,
     MessageType.WIN: BattleStateTracker._handle_win,
