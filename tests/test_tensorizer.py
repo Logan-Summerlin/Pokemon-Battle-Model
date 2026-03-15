@@ -63,7 +63,7 @@ def make_pokemon_obs(
         item=item,
         ability=ability,
         boosts={"atk": 0, "def": 0, "spa": 0, "spd": 0, "spe": 0, "accuracy": 0, "evasion": 0},
-        base_stats={"hp": 35, "atk": 55, "def": 40, "spa": 50, "spd": 50, "spe": 90},
+        base_stats={"hp": 35, "atk": 55, "def": 30, "spa": 50, "spd": 40, "spe": 90},
         types="Electric",
         level=100,
         is_own=is_own,
