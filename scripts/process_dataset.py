@@ -5,10 +5,13 @@ Reads .json.lz4 files from data/raw/, parses them into observations,
 tensorizes, and saves processed data with train/val/test splits.
 
 Uses streaming processing to avoid loading all battles into memory at once.
+Supports multiple generations via --generation flag. Vocabularies are
+saved to generation-specific subdirectories (e.g., vocabs/gen3/, vocabs/gen9/).
 
 Usage:
     python scripts/process_dataset.py
-    python scripts/process_dataset.py --input-dir data/raw --output-dir data/processed
+    python scripts/process_dataset.py --generation gen3ou
+    python scripts/process_dataset.py --generation gen9ou --input-dir data/raw --output-dir data/processed
     python scripts/process_dataset.py --max-battles 1000
 """
 
@@ -31,6 +34,10 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Process raw replays into training data")
+    parser.add_argument(
+        "--generation", type=str, default="gen3ou",
+        help="Generation format being processed, e.g. gen3ou, gen9ou (default: gen3ou)",
+    )
     parser.add_argument(
         "--input-dir", type=str, default="data/raw",
         help="Directory containing raw .json.lz4 files",
@@ -73,7 +80,11 @@ def main() -> None:
     vocabs = BattleVocabularies()
     priors = MetagamePriors()
 
+    generation = args.generation
+    logger.info(f"Processing generation: {generation}")
+
     metadata: dict = {
+        "generation": generation,
         "num_battles": 0,
         "num_turns": 0,
         "num_wins": 0,
@@ -135,8 +146,11 @@ def main() -> None:
     metadata["elo_distribution"] = elo_counts
     metadata["avg_turns"] = metadata["num_turns"] / metadata["num_battles"]
 
-    # Save vocabularies
+    # Save vocabularies to generation-specific subdirectory
     vocabs.freeze_all()
+    vocab_dir = output_dir / "vocabs" / generation
+    vocabs.save(vocab_dir)
+    # Also save to default vocabs/ for backward compatibility
     vocabs.save(output_dir / "vocabs")
 
     # Save metadata

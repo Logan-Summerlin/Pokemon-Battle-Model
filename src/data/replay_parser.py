@@ -5,6 +5,12 @@ Parses LZ4-compressed JSON replay files from the Metamon dataset
 representation. Each file contains one battle trajectory as seen
 from one player's perspective.
 
+Supports both Gen 9 and Gen 3 replay formats. Key differences:
+- Gen 3: No team preview (opponent_teampreview is empty)
+- Gen 3: can_tera is always False, tera_type fields are empty
+- Gen 3: No terrain data (terrains introduced in Gen 6)
+- Gen 3: Weather from abilities is permanent (e.g., Sand Stream)
+
 Metamon JSON structure:
     {
         "states": [<UniversalState dict>, ...],   # per-turn game states
@@ -12,7 +18,7 @@ Metamon JSON structure:
     }
 
 UniversalState fields (relevant subset):
-    - format: str (e.g., "gen9ou")
+    - format: str (e.g., "gen9ou", "gen3ou")
     - player_active_pokemon: dict with name, hp_pct, types, item, ability, ...
     - opponent_active_pokemon: dict with same fields
     - available_switches: list of pokemon dicts
@@ -21,9 +27,9 @@ UniversalState fields (relevant subset):
     - player_conditions / opponent_conditions: str
     - weather / battle_field: str
     - forced_switch: bool
-    - can_tera: bool
+    - can_tera: bool (always False for Gen 3)
     - battle_won / battle_lost: bool
-    - opponent_teampreview: list of pokemon dicts (Gen 9)
+    - opponent_teampreview: list of pokemon dicts (Gen 9 only; empty for Gen 3)
 """
 
 from __future__ import annotations
@@ -142,6 +148,23 @@ class ParsedBattle:
     def won(self) -> bool:
         return self.result == "WIN"
 
+    @property
+    def generation(self) -> int:
+        """Extract the generation number from the format string.
+
+        Returns 0 if the generation cannot be determined.
+        """
+        return _parse_generation(self.format)
+
+    @property
+    def has_team_preview(self) -> bool:
+        """Whether this battle format has team preview.
+
+        Team preview was introduced in Gen 5. Gens 1-4 have no team preview.
+        """
+        gen = self.generation
+        return gen >= 5
+
     def is_valid(self) -> bool:
         """Check if this battle has valid data for training."""
         if not self.turns or not self.actions:
@@ -154,6 +177,19 @@ class ParsedBattle:
 
 
 # ── Parsing functions ─────────────────────────────────────────────────────
+
+
+def _parse_generation(format_str: str) -> int:
+    """Extract generation number from a format string like 'gen3ou' or 'gen9ou'.
+
+    Returns 0 if the generation cannot be determined.
+    """
+    if not format_str:
+        return 0
+    match = re.match(r"gen(\d+)", format_str.lower())
+    if match:
+        return int(match.group(1))
+    return 0
 
 
 def _parse_move_dict(d: dict[str, Any] | None) -> ParsedMove:
@@ -374,7 +410,7 @@ def iter_battles_from_tar(
     """Iterate over battles from a tar.gz archive.
 
     Args:
-        tar_path: Path to gen9ou.tar.gz or similar archive.
+        tar_path: Path to gen3ou.tar.gz, gen9ou.tar.gz, or similar archive.
         max_battles: Maximum number of battles to yield.
         elo_threshold: Minimum Elo to include (from filename).
         format_filter: Only include battles matching this format string.

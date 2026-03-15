@@ -231,17 +231,23 @@ class TestFieldTensorization:
         tensor = tensorize_field(field, vocabs, build_vocab=True)
         assert tensor[0] == vocabs.weather.encode("RainDance")
 
+    def test_weather_permanent(self) -> None:
+        vocabs = BattleVocabularies()
+        field = FieldObservation(weather_permanent=True)
+        tensor = tensorize_field(field, vocabs, build_vocab=True)
+        assert tensor[2] == 1.0  # After weather(1) + terrain(1)
+
     def test_stealth_rock(self) -> None:
         vocabs = BattleVocabularies()
         field = FieldObservation(own_stealth_rock=True)
         tensor = tensorize_field(field, vocabs, build_vocab=True)
-        assert tensor[2] == 1.0  # After weather(1) + terrain(1)
+        assert tensor[3] == 1.0  # After weather(1) + terrain(1) + weather_permanent(1)
 
     def test_spikes_normalized(self) -> None:
         vocabs = BattleVocabularies()
         field = FieldObservation(own_spikes=3)
         tensor = tensorize_field(field, vocabs, build_vocab=True)
-        assert tensor[3] == pytest.approx(1.0)  # 3/3 = 1.0
+        assert tensor[4] == pytest.approx(1.0)  # 3/3 = 1.0
 
 
 # ── Tests: Turn tensorization ─────────────────────────────────────────────

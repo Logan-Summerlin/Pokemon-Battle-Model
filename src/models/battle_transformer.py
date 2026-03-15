@@ -316,11 +316,12 @@ class ContextEmbedding(nn.Module):
         c = config
         self.config = config
 
-        # Context: turn_num(0), opp_remaining(1), can_tera(2), forced_switch(3),
-        #          prev_player_move(4), prev_opponent_move(5)
+        # Context: turn_num(0), opp_remaining(1), num_opp_revealed(2),
+        #          can_tera(3), forced_switch(4), is_lead_turn(5),
+        #          prev_player_move(6), prev_opponent_move(7)
         self.prev_move_emb = move_embedding or nn.Embedding(c.moves_vocab_size, c.move_embedding_dim, padding_idx=0)
 
-        cont_dim = 4  # turn_num, opp_remaining, can_tera, forced_switch
+        cont_dim = 6  # turn_num, opp_remaining, num_opp_revealed, can_tera, forced_switch, is_lead_turn
         total_in = cont_dim + 2 * c.move_embedding_dim
 
         self.proj = nn.Linear(total_in, c.hidden_dim)
@@ -334,8 +335,8 @@ class ContextEmbedding(nn.Module):
         Returns:
             (..., hidden_dim) context token embedding
         """
-        cont = context_features[..., :4]
-        move_indices = context_features[..., 4:6].long().clamp(min=0)
+        cont = context_features[..., :6]
+        move_indices = context_features[..., 6:8].long().clamp(min=0)
 
         prev_player = self.prev_move_emb(move_indices[..., 0])
         prev_opp = self.prev_move_emb(move_indices[..., 1])
