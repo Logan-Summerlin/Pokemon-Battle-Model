@@ -617,8 +617,7 @@ def evaluate_on_test(
 
     action_names = [
         "move1", "move2", "move3", "move4",
-        "tera_move1", "tera_move2", "tera_move3", "tera_move4",
-        "switch1", "switch2", "switch3", "switch4", "switch5",
+        "switch2", "switch3", "switch4", "switch5", "switch6",
     ]
     per_action_acc = {}
     for i in range(NUM_ACTIONS):
