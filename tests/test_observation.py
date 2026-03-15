@@ -38,8 +38,12 @@ def make_pokemon(
     status: str = "",
 ) -> ParsedPokemon:
     move_list = []
-    for m in (moves or ["Thunderbolt", "Volt Switch"]):
-        move_list.append(ParsedMove(name=m, move_type="Electric", base_power=90))
+    default_moves = moves or ["Thunderbolt", "Quick Attack"]
+    for m in default_moves:
+        if m == "Quick Attack":
+            move_list.append(ParsedMove(name=m, move_type="Normal", base_power=40))
+        else:
+            move_list.append(ParsedMove(name=m, move_type="Electric", base_power=90))
     return ParsedPokemon(
         name=name,
         hp_pct=hp_pct,
@@ -257,14 +261,14 @@ class TestOpponentTracker:
 
     def test_item_reveal(self) -> None:
         tracker = OpponentTracker()
-        opp = make_pokemon("Garchomp", item="Choice Scarf")
+        opp = make_pokemon("Salamence", item="Choice Band")
         turn = make_turn(opponent_active=opp)
         tracker.update_from_turn(turn)
-        assert tracker.get_revealed_item("Garchomp") == "Choice Scarf"
+        assert tracker.get_revealed_item("Salamence") == "Choice Band"
 
     def test_ability_reveal(self) -> None:
         tracker = OpponentTracker()
-        opp = make_pokemon("Heatran", ability="Flash Fire")
+        opp = make_pokemon("Metagross", ability="Clear Body")
         turn = make_turn(opponent_active=opp)
         tracker.update_from_turn(turn)
-        assert tracker.get_revealed_ability("Heatran") == "Flash Fire"
+        assert tracker.get_revealed_ability("Metagross") == "Clear Body"

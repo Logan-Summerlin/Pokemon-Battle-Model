@@ -59,7 +59,7 @@ def make_pokemon_obs(
         status=status,
         is_active=is_active,
         is_fainted=hp <= 0,
-        moves=moves or ["Thunderbolt", "Volt Switch"],
+        moves=moves or ["Thunderbolt", "Quick Attack"],
         item=item,
         ability=ability,
         boosts={"atk": 0, "def": 0, "spa": 0, "spd": 0, "spe": 0, "accuracy": 0, "evasion": 0},

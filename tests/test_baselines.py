@@ -67,7 +67,7 @@ from src.models.baseline_mlp import (
 
 
 def _make_own_pokemon(
-    species: str = "Garchomp",
+    species: str = "Salamence",
     hp: int = 300,
     max_hp: int = 300,
     moves: list[str] | None = None,
@@ -76,9 +76,9 @@ def _make_own_pokemon(
 ) -> OwnPokemon:
     """Create an OwnPokemon for testing."""
     if moves is None:
-        moves = ["Earthquake", "Dragon Claw", "Swords Dance", "Stone Edge"]
+        moves = ["Earthquake", "Dragon Claw", "Dragon Dance", "Rock Slide"]
     if stats is None:
-        stats = {"atk": 130, "def": 95, "spa": 80, "spd": 85, "spe": 102}
+        stats = {"atk": 135, "def": 80, "spa": 110, "spd": 80, "spe": 100}
 
     return OwnPokemon(
         species=species,
@@ -93,7 +93,7 @@ def _make_own_pokemon(
 
 
 def _make_opp_pokemon(
-    species: str = "Clefable",
+    species: str = "Blissey",
     hp_frac: float = 1.0,
     active: bool = True,
 ) -> OpponentPokemon:
@@ -114,16 +114,16 @@ def _make_state(
     """Create a BattleState for testing."""
     if own_pokemon is None:
         own_pokemon = [
-            _make_own_pokemon("Garchomp", active=True),
-            _make_own_pokemon("Ferrothorn", hp=300, max_hp=300, active=False,
-                             moves=["Power Whip", "Knock Off", "Stealth Rock", "Leech Seed"],
-                             stats={"atk": 94, "def": 131, "spa": 54, "spd": 116, "spe": 20}),
-            _make_own_pokemon("Heatran", hp=300, max_hp=300, active=False,
-                             moves=["Flamethrower", "Flash Cannon", "Earth Power", "Stealth Rock"],
-                             stats={"atk": 90, "def": 106, "spa": 130, "spd": 106, "spe": 77}),
+            _make_own_pokemon("Salamence", active=True),
+            _make_own_pokemon("Skarmory", hp=300, max_hp=300, active=False,
+                             moves=["Drill Peck", "Spikes", "Whirlwind", "Rest"],
+                             stats={"atk": 80, "def": 140, "spa": 40, "spd": 70, "spe": 70}),
+            _make_own_pokemon("Metagross", hp=300, max_hp=300, active=False,
+                             moves=["Meteor Mash", "Psychic", "Earthquake", "Explosion"],
+                             stats={"atk": 135, "def": 130, "spa": 95, "spd": 90, "spe": 70}),
         ]
     if opp_pokemon is None:
-        opp_pokemon = [_make_opp_pokemon("Clefable")]
+        opp_pokemon = [_make_opp_pokemon("Blissey")]
 
     state = BattleState(
         player_id="p1",
@@ -219,32 +219,32 @@ class TestDefensiveTypeScore:
 
 class TestDamageEstimation:
     def test_stab_bonus(self):
-        attacker = _make_own_pokemon("Garchomp", stats={"atk": 130, "spa": 80})
-        # Earthquake (Ground) on Garchomp (Ground/Dragon) = STAB
-        damage = _estimate_damage("Earthquake", attacker, ["Normal"], ["Ground", "Dragon"])
+        attacker = _make_own_pokemon("Salamence", stats={"atk": 135, "spa": 110})
+        # Dragon Claw (Dragon) on Salamence (Dragon/Flying) = STAB
+        damage = _estimate_damage("Dragon Claw", attacker, ["Normal"], ["Dragon", "Flying"])
         # Without STAB
-        damage_no_stab = _estimate_damage("Stone Edge", attacker, ["Normal"], ["Ground", "Dragon"])
-        # EQ has 100bp * 1.5 STAB * 1.3 atk factor = 195
-        # Stone Edge has 100bp * 1.0 * 1.3 = 130
+        damage_no_stab = _estimate_damage("Rock Slide", attacker, ["Normal"], ["Dragon", "Flying"])
+        # Dragon Claw has 80bp * 1.5 STAB * 1.35 atk factor
+        # Rock Slide has 75bp * 1.0 * 1.35
         assert damage > damage_no_stab
 
     def test_type_effectiveness_in_damage(self):
-        attacker = _make_own_pokemon("Garchomp")
+        attacker = _make_own_pokemon("Salamence")
         # Earthquake on Fire type (SE)
-        damage_se = _estimate_damage("Earthquake", attacker, ["Fire"], ["Ground"])
+        damage_se = _estimate_damage("Earthquake", attacker, ["Fire"], ["Dragon", "Flying"])
         # Earthquake on Flying type (immune)
-        damage_immune = _estimate_damage("Earthquake", attacker, ["Flying"], ["Ground"])
+        damage_immune = _estimate_damage("Earthquake", attacker, ["Flying"], ["Dragon", "Flying"])
         assert damage_se > 0
         assert damage_immune == 0
 
     def test_status_move_zero_damage(self):
-        attacker = _make_own_pokemon("Garchomp")
-        damage = _estimate_damage("Swords Dance", attacker, ["Normal"], ["Ground"])
+        attacker = _make_own_pokemon("Salamence")
+        damage = _estimate_damage("Swords Dance", attacker, ["Normal"], ["Dragon", "Flying"])
         assert damage == 0.0
 
     def test_unknown_move(self):
-        attacker = _make_own_pokemon("Garchomp")
-        damage = _estimate_damage("UnknownMove123", attacker, ["Normal"], ["Ground"])
+        attacker = _make_own_pokemon("Salamence")
+        damage = _estimate_damage("UnknownMove123", attacker, ["Normal"], ["Dragon", "Flying"])
         assert damage == 60.0  # Default for unknown moves
 
 
@@ -262,18 +262,18 @@ class TestHeuristicBot:
         """Bot should prefer Earthquake (100bp, SE vs Steel) over weak moves."""
         own = [
             _make_own_pokemon(
-                "Garchomp",
-                moves=["Earthquake", "Dragon Claw", "Swords Dance", "Stone Edge"],
-                stats={"atk": 130, "def": 95, "spa": 80, "spd": 85, "spe": 102},
+                "Salamence",
+                moves=["Earthquake", "Dragon Claw", "Dragon Dance", "Rock Slide"],
+                stats={"atk": 135, "def": 80, "spa": 110, "spd": 80, "spe": 100},
             ),
         ]
-        opp = [_make_opp_pokemon("Heatran")]  # Fire/Steel - weak to Ground
+        opp = [_make_opp_pokemon("Metagross")]  # Steel/Psychic - weak to Ground
         state = _make_state(own_pokemon=own, opp_pokemon=opp)
         obs, mask = _make_observation(state, [MOVE_1, MOVE_2, MOVE_3, MOVE_4])
 
         bot = HeuristicBot(seed=42)
         action = bot.choose_action(obs, mask)
-        # Should pick Earthquake (move 1, index 0) due to 4x SE vs Fire/Steel
+        # Should pick Earthquake (move 1, index 0) due to 2x SE vs Steel/Psychic
         assert action.canonical_index == MOVE_1
 
     def test_handles_only_switches(self):
@@ -286,7 +286,7 @@ class TestHeuristicBot:
     def test_no_crash_with_empty_moves(self):
         """Bot shouldn't crash if pokemon has no moves."""
         own = [_make_own_pokemon("Ditto", moves=[])]
-        opp = [_make_opp_pokemon("Clefable")]
+        opp = [_make_opp_pokemon("Blissey")]
         state = _make_state(own_pokemon=own, opp_pokemon=opp)
         obs, mask = _make_observation(state, [SWITCH_2])
         bot = HeuristicBot(seed=42)

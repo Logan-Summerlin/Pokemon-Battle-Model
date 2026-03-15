@@ -1,12 +1,20 @@
-# Pokemon Battle Model: Evaluation Specification
+# Pokemon Battle Model: Evaluation Specification (Gen 3 OU)
 
 _Frozen: March 2026 — Updated only when new evaluation dimensions are added (never removed)._
+_Migrated to Gen 3 OU: March 2026_
 
 ---
 
 ## Overview
 
-This document defines the success metrics and evaluation criteria for the Pokemon Battle Model. Metrics are organized into tiers: **gate metrics** (must pass to proceed), **tracking metrics** (monitored but not blocking), and **diagnostic metrics** (for debugging and analysis).
+This document defines the success metrics and evaluation criteria for the Pokemon Battle Model targeting **Gen 3 OU (ADV)**. Metrics are organized into tiers: **gate metrics** (must pass to proceed), **tracking metrics** (monitored but not blocking), and **diagnostic metrics** (for debugging and analysis).
+
+Gen 3-specific considerations:
+- **No team preview**: The opponent's team is unknown at battle start, making hidden-info prediction harder but more valuable.
+- **9-action space**: 4 moves + 5 switches (no Terastallization).
+- **Type-based physical/special split**: Move category determined by type, not individual move.
+- **Permanent weather**: Ability-set weather (Sand Stream) lasts indefinitely.
+- **Compact metagame**: ~50-60 viable Pokemon, smaller vocabulary sizes.
 
 ---
 
@@ -33,14 +41,16 @@ Measured on the held-out test split of replay data (battles never seen during tr
 
 | Metric | Floor | Target | Description |
 |--------|-------|--------|-------------|
-| Top-1 action accuracy | 35% | 45% | Model's highest-probability action matches the human's action |
-| Top-3 action accuracy | 65% | 75% | Human's action is within the model's top 3 predictions |
+| Top-1 action accuracy | 38% | 48% | Model's highest-probability action matches the human's action |
+| Top-3 action accuracy | 68% | 78% | Human's action is within the model's top 3 predictions |
 | Negative log-likelihood (NLL) | — | Minimize | Average NLL of the human action under the model's distribution |
 
 **Notes:**
 - Action accuracy is measured only over turns where the player had >= 2 legal actions (exclude forced moves/switches).
 - Report accuracy broken down by game phase (early: turns 1–10, mid: 11–25, late: 25+).
-- Top-1 accuracy floors are deliberately modest — human play is noisy and multiple actions are often defensible.
+- Top-1 accuracy floors are slightly higher than Gen 9 — Gen 3's smaller action space (9 vs 13) and more predictable metagame should yield better prediction accuracy.
+- Gen 3 battles tend to be longer (more defensive meta), so report per-phase breakdowns carefully.
+- Lead matchup accuracy (turn 1 action) should be reported separately — lead play is a distinct sub-game in Gen 3.
 
 ---
 
@@ -50,31 +60,42 @@ Evaluated on test-set turns where the ground truth was eventually revealed later
 
 | Metric | Floor | Target | Description |
 |--------|-------|--------|-------------|
-| Item prediction accuracy (top-1) | 40% | 55% | Correct item predicted for opponent Pokemon |
-| Item prediction accuracy (top-3) | 70% | 80% | Correct item in top 3 predictions |
-| Speed tier bucket accuracy | 50% | 65% | Correct speed bucket (5 ordinal categories) |
-| Role archetype accuracy | 45% | 60% | Correct role (sweeper, wall, pivot, setter, etc.) |
-| Move-family presence (avg F1) | 0.50 | 0.65 | Multi-label F1 for move categories (priority, recovery, hazards, etc.) |
+| Item prediction accuracy (top-1) | 45% | 60% | Correct item predicted for opponent Pokemon (Gen 3: Leftovers-dominated distribution) |
+| Item prediction accuracy (top-3) | 75% | 85% | Correct item in top 3 predictions |
+| Speed tier bucket accuracy | 50% | 65% | Correct speed bucket (5 ordinal categories, Gen 3 thresholds: [110, 90, 65, 40]) |
+| Role archetype accuracy | 45% | 60% | Correct role (sweeper, wall, trapper, setter, etc.) |
+| Move-family presence (avg F1) | 0.50 | 0.65 | Multi-label F1 for move categories (priority, recovery, Spikes, status, etc.) |
 
 **Calibration requirement (Gate):**
 - Expected Calibration Error (ECE) for item predictions must be < 0.15.
 - When the model assigns 70% probability to an item class, it should be correct roughly 70% of the time.
 - Calibration is measured using 10 equal-width probability bins.
 
+**Gen 3-specific hidden-info notes:**
+- Item prediction floors are higher because Gen 3's item distribution is heavily concentrated (Leftovers dominates, Choice Band is the only Choice item).
+- No team preview means hidden-info prediction accuracy should be measured across the full game, not just post-preview.
+- Report **opponent team composition prediction**: given revealed Pokemon, can the model predict likely unrevealed teammates?
+- Report **scouting efficiency**: does the model appropriately switch to reveal opponent team composition when advantageous?
+
 ---
 
 ## 4. Cross-Archetype Robustness (Gate)
 
-Win rate must be evaluated separately against teams representing each major archetype.
+Win rate must be evaluated separately against teams representing each major Gen 3 OU archetype.
 
-| Archetype | Minimum Win Rate vs. Heuristic Bot |
-|-----------|--------------------------------------|
-| Hyper Offense (HO) | 55% |
-| Bulky Offense | 60% |
-| Balance | 60% |
-| Stall | 50% |
-| Weather (Rain/Sun/Sand) | 55% |
-| Trick Room | 50% |
+| Archetype | Minimum Win Rate vs. Heuristic Bot | Gen 3 Examples |
+|-----------|--------------------------------------|----------------|
+| TSS (Toxic/Spikes/Sandstorm) | 55% | Tyranitar + Skarmory + Blissey core with Spikes + Toxic stalling under permanent Sand Stream |
+| Bulky Offense | 60% | Salamence/Metagross/Suicune cores with Dragon Dance or Calm Mind sweepers |
+| Hyper Offense (HO) | 55% | Dragon Dance Salamence, Swords Dance Heracross, mixed Tyranitar, Dugtrio trapping |
+| Stall | 50% | Skarmory/Blissey/Milotic/Celebi cores with Wish + Protect + Spikes |
+| Weather (Rain/Sun) | 55% | Rain Dance teams (Kingdra, Ludicolo sweepers) or Sunny Day teams (Exeggutor, Houndoom) |
+| Baton Pass chains | 50% | Baton Pass teams chaining Speed/Attack boosts (Ninjask, Smeargle, Celebi) |
+
+**Gen 3-specific archetype notes:**
+- Trick Room does not exist in Gen 3 (introduced Gen 4). Replaced with Baton Pass chains, a legitimate Gen 3 strategy.
+- TSS is the signature Gen 3 stall strategy and the most common archetype. It exploits permanent Sand Stream weather.
+- "Trapper" is a distinct Gen 3 sub-strategy: Dugtrio (Arena Trap) and Magneton (Magnet Pull) remove specific threats.
 
 **Gate criterion:** Cross-archetype win rate variance must be below 0.04 (i.e., standard deviation of per-archetype win rates < 0.20). The model must not be a specialist that collapses against unfamiliar styles.
 
@@ -101,10 +122,12 @@ These are logged and monitored but do not gate phase transitions.
 | Metric | Description |
 |--------|-------------|
 | Value head accuracy | Binary cross-entropy of win probability predictions vs. actual game outcomes |
-| Average game length (model vs. baselines) | Number of turns per game — anomalous shortening/lengthening flags issues |
+| Average game length (model vs. baselines) | Number of turns per game — Gen 3 games tend to be longer (defensive meta); anomalous shortening flags issues |
 | Action diversity | Entropy of action distributions — very low entropy suggests degenerate policy |
-| Tera usage rate | How often the model chooses to Terastallize — compare against human rates |
 | Switch rate | How often the model switches — compare against human rates |
+| Spikes usage rate | How often the model uses Spikes when available — the primary hazard in Gen 3 |
+| Lead matchup win rate | Win rate broken down by whether the model won/lost the lead matchup (Gen 3-specific) |
+| Weather exploitation rate | How effectively the model leverages or plays around permanent sandstorm |
 | Illegal action attempt rate | Must be exactly 0% after Phase 1, but tracked as a safety net |
 
 ---
@@ -114,10 +137,12 @@ These are logged and monitored but do not gate phase transitions.
 | Metric | Description |
 |--------|-------------|
 | Per-turn confidence | Model's maximum action probability per turn — tracks uncertainty |
-| Hidden-info prediction accuracy by turn number | Does item/speed prediction improve as game progresses? |
+| Hidden-info prediction accuracy by turn number | Does item/speed prediction improve as game progresses? (Critical for no-team-preview) |
+| Opponent team reveal curve | How many opponent Pokemon are revealed by turn N? Does the model scout appropriately? |
 | Win rate by game length bucket | Does the model perform differently in short vs. long games? |
 | Loss decomposition | Policy loss vs. auxiliary loss vs. value loss trends |
-| Attention pattern analysis | Which tokens does the model attend to most? (Spot-check only) |
+| Attention pattern analysis | Which tokens does the model attend to most? Especially: does it attend more to revealed vs. unrevealed opponent slots? |
+| Physical/special damage calc accuracy | Does the model correctly account for the type-based phys/special split in damage estimation? |
 
 ---
 
@@ -153,3 +178,4 @@ These are logged and monitored but do not gate phase transitions.
 ---
 
 _All metrics are computed using the evaluation harness built in Phase 6. Automated evaluation runs are tracked in Weights & Biases._
+_Gen 3 OU migration: All metrics calibrated for the ADV metagame. No Terastallization, no Stealth Rock, 9-action space._

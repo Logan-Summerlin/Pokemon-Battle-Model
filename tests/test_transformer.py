@@ -450,7 +450,7 @@ class TestAuxiliaryLabels:
     def test_move_families(self):
         from src.data.auxiliary_labels import classify_move_families, NUM_MOVE_FAMILIES
         # Gen 3 priority: ExtremeSpeed, Mach Punch, Quick Attack, Fake Out
-        families = classify_move_families(["ExtremeSpeed", "Swords Dance", "Iron Head"])
+        families = classify_move_families(["ExtremeSpeed", "Swords Dance", "Meteor Mash"])
         assert len(families) == NUM_MOVE_FAMILIES
         assert families[0] == 1  # priority (ExtremeSpeed)
         assert families[5] == 1  # setup (Swords Dance)

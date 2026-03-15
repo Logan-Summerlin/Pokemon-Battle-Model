@@ -90,13 +90,13 @@ class TestPokemonDetails:
         assert result.shiny is True
 
     def test_forme(self) -> None:
-        result = parse_pokemon_details("Charizard-Mega-X, L100, M")
-        assert result.species == "Charizard-Mega-X"
-        assert result.base_species == "Charizard"
+        result = parse_pokemon_details("Deoxys-Speed, L100, M")
+        assert result.species == "Deoxys-Speed"
+        assert result.base_species == "Deoxys"
 
     def test_genderless(self) -> None:
-        result = parse_pokemon_details("Magnezone, L100")
-        assert result.species == "Magnezone"
+        result = parse_pokemon_details("Metagross, L100")
+        assert result.species == "Metagross"
         assert result.gender == ""
 
 
@@ -157,10 +157,10 @@ class TestParseMessage:
         assert msg.msg_type == MessageType.DAMAGE
 
     def test_message_with_kwargs(self) -> None:
-        msg = parse_message("|-damage|p2a: Charizard|50/100|[from] Stealth Rock")
+        msg = parse_message("|-damage|p2a: Charizard|50/100|[from] Spikes")
         assert msg.msg_type == MessageType.DAMAGE
         assert "from" in msg.kwargs
-        assert msg.kwargs["from"] == "Stealth Rock"
+        assert msg.kwargs["from"] == "Spikes"
 
     def test_win_message(self) -> None:
         msg = parse_message("|win|Player1")
@@ -172,7 +172,7 @@ class TestParseMessage:
         assert msg.msg_type == MessageType.WEATHER
 
     def test_boost_message(self) -> None:
-        msg = parse_message("|-boost|p1a: Dragonite|atk|2")
+        msg = parse_message("|-boost|p1a: Salamence|atk|2")
         assert msg.msg_type == MessageType.BOOST
 
     def test_unknown_message(self) -> None:
@@ -188,7 +188,7 @@ class TestParseMessage:
         assert msg.msg_type == MessageType.UNKNOWN
 
     def test_status_message(self) -> None:
-        msg = parse_message("|-status|p2a: Ferrothorn|par")
+        msg = parse_message("|-status|p2a: Skarmory|par")
         assert msg.msg_type == MessageType.STATUS
 
     def test_faint_message(self) -> None:
@@ -196,11 +196,11 @@ class TestParseMessage:
         assert msg.msg_type == MessageType.FAINT
 
     def test_terastallize_message(self) -> None:
-        msg = parse_message("|-terastallize|p1a: Kingambit|Dark")
+        msg = parse_message("|-terastallize|p1a: Tyranitar|Dark")
         assert msg.msg_type == MessageType.TERASTALLIZE
 
     def test_sidestart_message(self) -> None:
-        msg = parse_message("|-sidestart|p1: Player1|move: Stealth Rock")
+        msg = parse_message("|-sidestart|p1: Player1|move: Spikes")
         assert msg.msg_type == MessageType.SIDESTART
 
     def test_poke_message(self) -> None:
@@ -260,9 +260,9 @@ class TestSpecializedParsers:
         assert data["hp_status"].current_hp == 50
 
     def test_parse_boost_message(self) -> None:
-        msg = parse_message("|-boost|p1a: Dragonite|atk|2")
+        msg = parse_message("|-boost|p1a: Salamence|atk|2")
         data = parse_boost_message(msg)
-        assert data["target"].name == "Dragonite"
+        assert data["target"].name == "Salamence"
         assert data["stat"] == "atk"
         assert data["amount"] == 2
 
@@ -272,15 +272,15 @@ class TestSpecializedParsers:
         assert data["weather"] == "RainDance"
 
     def test_parse_side_condition_message(self) -> None:
-        msg = parse_message("|-sidestart|p1: Player1|move: Stealth Rock")
+        msg = parse_message("|-sidestart|p1: Player1|move: Spikes")
         data = parse_side_condition_message(msg)
         assert data["player"] == "p1"
-        assert data["condition"] == "move: Stealth Rock"
+        assert data["condition"] == "move: Spikes"
 
     def test_parse_terastallize_message(self) -> None:
-        msg = parse_message("|-terastallize|p1a: Kingambit|Dark")
+        msg = parse_message("|-terastallize|p1a: Tyranitar|Dark")
         data = parse_terastallize_message(msg)
-        assert data["target"].name == "Kingambit"
+        assert data["target"].name == "Tyranitar"
         assert data["tera_type"] == "Dark"
 
     def test_parse_poke_message(self) -> None:
