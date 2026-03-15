@@ -6,7 +6,7 @@ P8 Gen 3 configuration:
 - max window 20
 - auxiliary head enabled (aux_weight=0.3, higher for Gen 3: no team preview)
 - value head enabled
-- dropout 0.15 (stronger regularization for Gen 3's potentially smaller dataset)
+- dropout 0.1
 
 This wrapper launches scripts/train_phase4.py for one or more seeds, then
 creates an aggregated benchmark summary JSON suitable for LLM comparison.
@@ -45,7 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--weight-decay", type=float, default=0.01)
     parser.add_argument("--warmup-steps", type=int, default=300)
     parser.add_argument("--grad-accum", type=int, default=1)
-    parser.add_argument("--dropout", type=float, default=0.15)  # Gen 3: stronger regularization for smaller dataset
+    parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--num-workers", type=int, default=None)
     parser.add_argument("--prefetch-factor", type=int, default=4)
     parser.add_argument("--persistent-workers", action="store_true")
