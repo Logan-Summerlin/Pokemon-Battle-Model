@@ -29,27 +29,13 @@ class TestNormalization:
         assert _normalize_species_name("Pikachu", " ") == "pikachu"
 
     def test_multi_word_species(self) -> None:
-        assert _normalize_species_name("Iron Valiant", " ") == "ironvaliant"
-        assert _normalize_species_name("Great Tusk", " ") == "greattusk"
-        assert _normalize_species_name("Raging Bolt", " ") == "ragingbolt"
+        assert _normalize_species_name("Mr. Mime", " ") == "mrmime"
+        assert _normalize_species_name("Ho-Oh", " ") == "hooh"
 
-    def test_regional_forms(self) -> None:
-        assert _normalize_species_name("Raichu", "Alolan Raichu") == "raichualola"
-        assert _normalize_species_name("Slowking", "Galarian Slowking") == "slowkinggalar"
-        assert _normalize_species_name("Samurott", "Hisuian Samurott") == "samurotthisui"
-
-    def test_therian_forms(self) -> None:
-        assert _normalize_species_name("Landorus", "Therian Forme") == "landorustherian"
-        assert _normalize_species_name("Tornadus", "Therian Forme") == "tornadustherian"
-
-    def test_incarnate_is_default(self) -> None:
-        assert _normalize_species_name("Landorus", "Incarnate Forme") == "landorus"
-
-    def test_ogerpon_masks(self) -> None:
-        assert _normalize_species_name("Ogerpon", "Teal Mask") == "ogerpon"
-        assert _normalize_species_name("Ogerpon", "Wellspring Mask") == "ogerponwellspring"
-        assert _normalize_species_name("Ogerpon", "Hearthflame Mask") == "ogerponhearthflame"
-        assert _normalize_species_name("Ogerpon", "Cornerstone Mask") == "ogerponcornerstone"
+    def test_deoxys_form_variants(self) -> None:
+        assert _normalize_species_name("Deoxys", "Attack Forme") == "deoxysattack"
+        assert _normalize_species_name("Deoxys", "Defense Forme") == "deoxysdefense"
+        assert _normalize_species_name("Deoxys", "Speed Forme") == "deoxysspeed"
 
     def test_rotom_forms(self) -> None:
         assert _normalize_species_name("Rotom", " ") == "rotom"
@@ -66,10 +52,6 @@ class TestNormalization:
         assert _normalize_species_name("Mr. Mime", " ") == "mrmime"
         assert _normalize_species_name("Farfetch'd", " ") == "farfetchd"
 
-    def test_paldean_tauros(self) -> None:
-        assert _normalize_species_name("Tauros", "Aqua Breed") == "taurospaldeaaqua"
-        assert _normalize_species_name("Tauros", "Blaze Breed") == "taurospaldeablaze"
-
 
 # ── Tests: Crosswalk loading ────────────────────────────────────────────
 
@@ -81,22 +63,22 @@ class TestCrosswalkLoading:
 
     def test_lookup_standard_species(self) -> None:
         cw = BaseStatsCrosswalk.load()
-        stats = cw.get("garchomp")
-        assert stats["hp"] == 108
-        assert stats["atk"] == 130
-        assert stats["spe"] == 102
+        stats = cw.get("salamence")
+        assert stats["hp"] == 95
+        assert stats["atk"] == 135
+        assert stats["spe"] == 100
 
     def test_lookup_form_variant(self) -> None:
         cw = BaseStatsCrosswalk.load()
-        stats = cw.get("landorustherian")
-        assert stats["atk"] == 145
-        assert stats["spe"] == 91
+        stats = cw.get("deoxysspeed")
+        assert stats["atk"] == 95
+        assert stats["spe"] == 180
 
-    def test_lookup_paradox_pokemon(self) -> None:
+    def test_lookup_gen3_pokemon(self) -> None:
         cw = BaseStatsCrosswalk.load()
-        stats = cw.get("ironvaliant")
-        assert stats["atk"] == 130
-        assert stats["spe"] == 116
+        stats = cw.get("metagross")
+        assert stats["atk"] == 135
+        assert stats["spe"] == 70
 
     def test_lookup_returns_copy(self) -> None:
         """Modifying returned dict shouldn't affect internal state."""
@@ -118,12 +100,12 @@ class TestCrosswalkLoading:
     def test_alias_coverage(self) -> None:
         """Aliases for forms not in CSV should be populated."""
         cw = BaseStatsCrosswalk.load()
-        # Tera Ogerpon forms share stats with base mask forms
-        assert cw.get("ogerponwellspringtera") == cw.get("ogerponwellspring")
-        # Mimikyu busted shares stats with base
-        assert cw.get("mimikyubusted") == cw.get("mimikyu")
-        # Arceus type forms share base stats
-        assert cw.get("arceusbug") == cw.get("arceus")
+        # Deoxys form aliases should all resolve
+        assert cw.get("deoxysattack") != {}
+        assert cw.get("deoxysdefense") != {}
+        # Castform forms share base stats with base Castform
+        assert cw.get("castformsunny") == cw.get("castform")
+        assert cw.get("castformrainy") == cw.get("castform")
 
 
 # ── Tests: Vocab coverage ──────────────────────────────────────────────

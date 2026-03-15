@@ -227,8 +227,8 @@ class TestLegalActionMask:
         moves = [
             {"move": "Earthquake", "pp": 16, "maxpp": 16, "disabled": True},
             {"move": "Swords Dance", "pp": 32, "maxpp": 32, "disabled": False},
-            {"move": "Scale Shot", "pp": 32, "maxpp": 32, "disabled": False},
-            {"move": "Iron Head", "pp": 24, "maxpp": 24, "disabled": False},
+            {"move": "Dragon Claw", "pp": 32, "maxpp": 32, "disabled": False},
+            {"move": "Rock Slide", "pp": 24, "maxpp": 24, "disabled": False},
         ]
         request = _make_request(moves=moves)
         mask = get_legal_actions_from_request(request)
@@ -243,8 +243,8 @@ class TestLegalActionMask:
         moves = [
             {"move": "Earthquake", "pp": 0, "maxpp": 16, "disabled": False},
             {"move": "Swords Dance", "pp": 32, "maxpp": 32, "disabled": False},
-            {"move": "Scale Shot", "pp": 0, "maxpp": 32, "disabled": False},
-            {"move": "Iron Head", "pp": 24, "maxpp": 24, "disabled": False},
+            {"move": "Dragon Claw", "pp": 0, "maxpp": 32, "disabled": False},
+            {"move": "Rock Slide", "pp": 24, "maxpp": 24, "disabled": False},
         ]
         request = _make_request(moves=moves)
         mask = get_legal_actions_from_request(request)
@@ -259,8 +259,8 @@ class TestLegalActionMask:
         moves = [
             {"move": "Earthquake", "pp": 0, "maxpp": 16, "disabled": False},
             {"move": "Swords Dance", "pp": 0, "maxpp": 32, "disabled": False},
-            {"move": "Scale Shot", "pp": 0, "maxpp": 32, "disabled": False},
-            {"move": "Iron Head", "pp": 0, "maxpp": 24, "disabled": False},
+            {"move": "Dragon Claw", "pp": 0, "maxpp": 32, "disabled": False},
+            {"move": "Rock Slide", "pp": 0, "maxpp": 24, "disabled": False},
         ]
         request = _make_request(moves=moves)
         mask = get_legal_actions_from_request(request)
@@ -333,8 +333,8 @@ class TestLegalActionMask:
         moves = [
             {"move": "Earthquake", "pp": 15, "maxpp": 16, "disabled": False},
             {"move": "Swords Dance", "pp": 32, "maxpp": 32, "disabled": True},
-            {"move": "Scale Shot", "pp": 32, "maxpp": 32, "disabled": True},
-            {"move": "Iron Head", "pp": 24, "maxpp": 24, "disabled": True},
+            {"move": "Dragon Claw", "pp": 32, "maxpp": 32, "disabled": True},
+            {"move": "Rock Slide", "pp": 24, "maxpp": 24, "disabled": True},
         ]
         request = _make_request(moves=moves)
         mask = get_legal_actions_from_request(request)
@@ -349,8 +349,8 @@ class TestLegalActionMask:
         moves = [
             {"move": "Earthquake", "pp": 15, "maxpp": 16, "disabled": True},
             {"move": "Swords Dance", "pp": 31, "maxpp": 32, "disabled": False},
-            {"move": "Scale Shot", "pp": 32, "maxpp": 32, "disabled": True},
-            {"move": "Iron Head", "pp": 24, "maxpp": 24, "disabled": True},
+            {"move": "Dragon Claw", "pp": 32, "maxpp": 32, "disabled": True},
+            {"move": "Rock Slide", "pp": 24, "maxpp": 24, "disabled": True},
         ]
         request = _make_request(moves=moves)
         mask = get_legal_actions_from_request(request)

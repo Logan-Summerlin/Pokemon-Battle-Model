@@ -40,15 +40,14 @@ def make_pokemon_dict(
     base_spd: int = 50,
     base_spe: int = 90,
     base_hp: int = 35,
-    tera_type: str = "",
 ) -> dict:
     """Create a mock Pokemon dict in Metamon format."""
     if moves is None:
         moves = [
             {"name": "Thunderbolt", "move_type": "Electric", "category": "Special",
              "base_power": 90, "accuracy": 100, "priority": 0, "current_pp": 24, "max_pp": 24},
-            {"name": "Volt Switch", "move_type": "Electric", "category": "Special",
-             "base_power": 70, "accuracy": 100, "priority": 0, "current_pp": 32, "max_pp": 32},
+            {"name": "Quick Attack", "move_type": "Normal", "category": "Physical",
+             "base_power": 40, "accuracy": 100, "priority": 1, "current_pp": 48, "max_pp": 48},
         ]
     return {
         "name": name,
@@ -73,7 +72,6 @@ def make_pokemon_dict(
         "base_spd": base_spd,
         "base_spe": base_spe,
         "base_hp": base_hp,
-        "tera_type": tera_type,
         "base_species": name,
     }
 
@@ -87,14 +85,14 @@ def make_state_dict(
     battle_won: bool = False,
     battle_lost: bool = False,
     forced_switch: bool = False,
-    can_tera: bool = True,
+    can_tera: bool = False,
     opponents_remaining: int = 6,
     player_prev_move: dict | None = None,
     opponent_prev_move: dict | None = None,
     opponent_teampreview: list | None = None,
 ) -> dict:
     return {
-        "format": "gen9ou",
+        "format": "gen3ou",
         "player_active_pokemon": player_active or make_pokemon_dict("Pikachu"),
         "opponent_active_pokemon": opponent_active or make_pokemon_dict("Charizard"),
         "available_switches": available_switches or [
@@ -142,10 +140,10 @@ def make_battle_json(
 
 class TestFilenameParser:
     def test_standard_filename(self) -> None:
-        filename = "battle-gen9ou-12345_1800_PlayerA_vs_PlayerB_15-03-2025_WIN.json.lz4"
+        filename = "battle-gen3ou-12345_1300_PlayerA_vs_PlayerB_15-03-2025_WIN.json.lz4"
         meta = parse_filename_metadata(filename)
-        assert meta["battle_id"] == "battle-gen9ou-12345"
-        assert meta["elo"] == "1800"
+        assert meta["battle_id"] == "battle-gen3ou-12345"
+        assert meta["elo"] == "1300"
         assert meta["player"] == "PlayerA"
         assert meta["opponent"] == "PlayerB"
         assert meta["date"] == "15-03-2025"
@@ -182,7 +180,7 @@ class TestBattleParsing:
         battle = load_battle_from_json(data, "test_battle.json")
         assert battle.num_turns == 5
         assert len(battle.actions) == 5
-        assert battle.format == "gen9ou"
+        assert battle.format == "gen3ou"
 
     def test_battle_validity(self) -> None:
         data = make_battle_json(num_turns=5)
@@ -249,23 +247,17 @@ class TestBattleParsing:
         battle = load_battle_from_json(data)
         assert battle.turns[0].forced_switch
 
-    def test_tera_availability(self) -> None:
-        state = make_state_dict(can_tera=True)
+    def test_no_tera_in_gen3(self) -> None:
+        state = make_state_dict(can_tera=False)
         data = {"states": [state, make_state_dict()], "actions": ["move0", "move1"]}
         battle = load_battle_from_json(data)
-        assert battle.turns[0].can_tera
+        assert not battle.turns[0].can_tera
 
-    def test_opponent_teampreview(self) -> None:
-        preview = [
-            make_pokemon_dict("Garchomp"),
-            make_pokemon_dict("Heatran"),
-            make_pokemon_dict("Tapu Koko"),
-        ]
-        state = make_state_dict(opponent_teampreview=preview)
+    def test_no_team_preview_gen3(self) -> None:
+        state = make_state_dict(opponent_teampreview=[])
         data = {"states": [state, make_state_dict()], "actions": ["move0", "move1"]}
         battle = load_battle_from_json(data)
-        assert len(battle.turns[0].opponent_teampreview) == 3
-        assert battle.turns[0].opponent_teampreview[0].name == "Garchomp"
+        assert len(battle.turns[0].opponent_teampreview) == 0
 
     def test_hp_fraction(self) -> None:
         active = make_pokemon_dict("Pikachu", hp_pct=0.5)
@@ -350,8 +342,8 @@ class TestEdgeCases:
         """Battle with minimal fields should still parse."""
         data = {
             "states": [
-                {"format": "gen9ou"},
-                {"format": "gen9ou"},
+                {"format": "gen3ou"},
+                {"format": "gen3ou"},
             ],
             "actions": ["move0", "move1"],
         }
@@ -387,26 +379,26 @@ class TestMetamonFormat:
     def test_string_teampreview(self) -> None:
         """Metamon opponent_teampreview is a list of species strings."""
         state = make_state_dict(
-            opponent_teampreview=["ogerpon", "dragapult", "kingambit", "rillaboom", "slowbro", "hawlucha"],
+            opponent_teampreview=["salamence", "metagross", "tyranitar", "swampert", "skarmory", "blissey"],
         )
         data = {"states": [state, make_state_dict()], "actions": [1, 2]}
         battle = load_battle_from_json(data)
         tp = battle.turns[0].opponent_teampreview
         assert len(tp) == 6
-        assert tp[0].name == "ogerpon"
-        assert tp[5].name == "hawlucha"
+        assert tp[0].name == "salamence"
+        assert tp[5].name == "blissey"
 
     def test_mixed_teampreview(self) -> None:
         """Handle mix of string and dict teampreview entries gracefully."""
         state = make_state_dict(
-            opponent_teampreview=["ogerpon", make_pokemon_dict("Kingambit")],
+            opponent_teampreview=["salamence", make_pokemon_dict("Metagross")],
         )
         data = {"states": [state, make_state_dict()], "actions": [1, 2]}
         battle = load_battle_from_json(data)
         tp = battle.turns[0].opponent_teampreview
         assert len(tp) == 2
-        assert tp[0].name == "ogerpon"
-        assert tp[1].name == "Kingambit"
+        assert tp[0].name == "salamence"
+        assert tp[1].name == "Metagross"
 
     def test_integer_actions(self) -> None:
         """Metamon uses integer action indices."""
@@ -420,9 +412,9 @@ class TestMetamonFormat:
     def test_unrated_elo_filename(self) -> None:
         """Smogtours battles have 'Unrated' as Elo."""
         meta = parse_filename_metadata(
-            "smogtours-gen9ou-731515_Unrated_lockon62163_vs_icebeam46118_11-19-2023_LOSS.json.lz4"
+            "smogtours-gen3ou-731515_Unrated_lockon62163_vs_icebeam46118_11-19-2023_LOSS.json.lz4"
         )
-        assert meta["battle_id"] == "smogtours-gen9ou-731515"
+        assert meta["battle_id"] == "smogtours-gen3ou-731515"
         assert meta["elo"] == "Unrated"
         assert meta["result"] == "LOSS"
 
@@ -433,7 +425,7 @@ class TestMetamonFormat:
         data = {"states": [state1, state2], "actions": [1, 2]}
         battle = load_battle_from_json(
             data,
-            filename="smogtours-gen9ou-731515_Unrated_lockon_vs_ice_11-19-2023_LOSS.json.lz4",
+            filename="smogtours-gen3ou-731515_Unrated_lockon_vs_ice_11-19-2023_LOSS.json.lz4",
         )
         assert battle.player_elo == 0
         assert battle.is_valid()
@@ -441,9 +433,9 @@ class TestMetamonFormat:
     def test_metamon_rated_filename(self) -> None:
         """Standard rated Metamon filename parsing."""
         meta = parse_filename_metadata(
-            "gen9ou-2011335206_1736_moltres22767_vs_levitate27225_12-14-2023_LOSS.json.lz4"
+            "gen3ou-2011335206_1736_moltres22767_vs_levitate27225_12-14-2023_LOSS.json.lz4"
         )
-        assert meta["battle_id"] == "gen9ou-2011335206"
+        assert meta["battle_id"] == "gen3ou-2011335206"
         assert meta["elo"] == "1736"
         assert meta["player"] == "moltres22767"
         assert meta["opponent"] == "levitate27225"
@@ -452,7 +444,7 @@ class TestMetamonFormat:
 
     def test_unknownitem_and_unknownability(self) -> None:
         """Metamon marks unrevealed items/abilities as 'unknownitem'/'unknownability'."""
-        opp = make_pokemon_dict("Dragapult", item="unknownitem", ability="unknownability")
+        opp = make_pokemon_dict("Starmie", item="unknownitem", ability="unknownability")
         state = make_state_dict(opponent_active=opp)
         data = {"states": [state, make_state_dict()], "actions": [1, 2]}
         battle = load_battle_from_json(data)
@@ -461,5 +453,5 @@ class TestMetamonFormat:
         tracker = OpponentTracker()
         tracker.update_from_turn(battle.turns[0])
         # unknownitem/unknownability should NOT be treated as reveals
-        assert tracker.get_revealed_item("Dragapult") == "unknown"
-        assert tracker.get_revealed_ability("Dragapult") == "unknown"
+        assert tracker.get_revealed_item("Starmie") == "unknown"
+        assert tracker.get_revealed_ability("Starmie") == "unknown"

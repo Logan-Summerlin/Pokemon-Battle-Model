@@ -39,18 +39,18 @@ def _make_observation(
 
     # Add an active Pokemon with moves
     active = OwnPokemon()
-    active.species = "Garchomp"
+    active.species = "Salamence"
     active.active = True
-    active.current_hp = 350
-    active.max_hp = 350
+    active.current_hp = 364
+    active.max_hp = 364
     if moves:
         active.moves = [MoveSlot(name=m) for m in moves]
     else:
         active.moves = [
             MoveSlot(name="Earthquake"),
-            MoveSlot(name="Swords Dance"),
-            MoveSlot(name="Scale Shot"),
-            MoveSlot(name="Iron Head"),
+            MoveSlot(name="Dragon Dance"),
+            MoveSlot(name="Dragon Claw"),
+            MoveSlot(name="Rock Slide"),
         ]
     state.own_team = [active]
     state.own_active_index = 0
@@ -162,7 +162,7 @@ class TestMaxDamageBot:
         bot = MaxDamageBot(seed=1)
         obs = _make_observation(
             legal_indices=[MOVE_1, MOVE_2, MOVE_3, MOVE_4],
-            moves=["Earthquake", "Swords Dance", "Scale Shot", "Iron Head"],
+            moves=["Earthquake", "Dragon Dance", "Dragon Claw", "Rock Slide"],
         )
 
         action = bot.choose_action(obs, obs.legal_actions)
