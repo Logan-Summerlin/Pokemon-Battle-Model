@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Train the Phase 4 P4 model on a 25,000-battle replay cohort.
+"""Train the Phase 4 P4 model on a 25,000-battle Gen 3 OU replay cohort.
 
-P4 configuration from docs/PHASE4_25K_COMPUTE_GENERALIZATION_EXPERIMENT.md:
+P4 Gen 3 configuration:
 - 6 layers / 384 hidden dim / 6 heads
 - max window 20
 - auxiliary head enabled (aux_weight=0.2)
 - value head enabled
+- dropout 0.1
 
 This wrapper launches scripts/train_phase4.py for one or more seeds, then
 creates an aggregated benchmark summary JSON suitable for cross-model
@@ -54,7 +55,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-pin-memory", action="store_true")
     parser.add_argument("--non-blocking-transfer", action="store_true")
     parser.add_argument("--blocking-transfer", action="store_true")
-    parser.add_argument("--output-root", type=str, default="checkpoints/phase4_p4_25k")
+    parser.add_argument("--output-root", type=str, default="checkpoints/phase4_gen3_p4_25k")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without executing")
     return parser.parse_args()
 
@@ -107,7 +108,7 @@ def aggregate(results: list[dict[str, Any]], args: argparse.Namespace) -> dict[s
     wall = [r["wall_time_min"] for r in results if r.get("wall_time_min") is not None]
 
     return {
-        "experiment": "phase4_p4_25k",
+        "experiment": "phase4_gen3_p4_25k",
         "created_at": datetime.now(UTC).isoformat(),
         "p4_config": {
             "num_layers": 6,

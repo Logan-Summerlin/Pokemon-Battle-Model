@@ -3,12 +3,12 @@
 Computes which actions are legal at each decision point in a battle,
 handling Gen 3 OU edge cases:
 - Forced switches (after faint)
-- Trapping (Shadow Tag, Arena Trap, Magnet Pull, etc.)
-- Choice lock (Choice Band)
+- Trapping (Shadow Tag, Arena Trap, Magnet Pull, trapping moves)
+- Choice Band lock (only Choice Band exists in Gen 3; no Choice Specs/Scarf)
 - Encore (locks into last used move)
 - Disabled moves
 - Struggle (when all moves have 0 PP or are disabled)
-- Move restrictions from volatile statuses (Taunt, Torment, etc.)
+- No Terastallization, no Z-moves, no Mega Evolution in Gen 3
 """
 
 from __future__ import annotations
@@ -31,15 +31,12 @@ TRAPPING_ABILITIES = frozenset({
     "magnetpull",
 })
 
-# Moves that trap the opponent
+# Moves that trap the opponent (Gen 3 only — no Infestation, Magma Storm,
+# Thousand Waves, or Sand Tomb trapping; Sand Tomb exists but doesn't trap)
 TRAPPING_MOVES = frozenset({
     "bind",
     "clamp",
     "firespin",
-    "infestation",
-    "magmastorm",
-    "sandtomb",
-    "thousandwaves",
     "whirlpool",
     "wrap",
 })
@@ -167,13 +164,11 @@ def _compute_move_legality(state: BattleState, mask: ActionMask) -> None:
     if all_disabled:
         mask.set_legal(MOVE_1)
 
-    # Handle special move restrictions from the request
+    # Handle special move restrictions from the request.
     # The server already marks moves as disabled in the request data,
     # so we trust the server's legality determination for moves.
     # Our job is to correctly map this to the action mask.
-
-    # If trapped/can't switch (handled in switch legality), and we have
-    # a maxMoves or zmoves field, handle those too (not applicable in Gen 9 OU)
+    # Gen 3 has no Z-moves, Mega Evolution, Dynamax, or Terastallization.
 
 
 def _compute_switch_legality(state: BattleState, mask: ActionMask) -> None:
@@ -226,9 +221,9 @@ def _is_trapped(state: BattleState) -> bool:
         if active.get("trapped") or active.get("maybeTrapped"):
             return True
 
-    # Also check volatile statuses
+    # Also check volatile statuses (Gen 3: no No Retreat, only partial trap)
     if state.own_active:
-        trapping_volatiles = {"partiallytrapped", "trapped", "noRetreat"}
+        trapping_volatiles = {"partiallytrapped", "trapped"}
         if state.own_active.volatiles & trapping_volatiles:
             return True
 
