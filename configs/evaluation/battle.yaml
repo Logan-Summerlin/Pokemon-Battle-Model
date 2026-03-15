@@ -37,7 +37,7 @@ archetypes:
   - rain
   - sun
   - sand
-  - trick_room
+  - baton_pass
 
 # Robustness
 uncommon_set_tests: true
