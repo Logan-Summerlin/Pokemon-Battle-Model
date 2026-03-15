@@ -4,7 +4,7 @@
 P8 Gen 3 configuration:
 - 4 layers / 256 hidden dim / 4 heads
 - max window 20
-- auxiliary head enabled (aux_weight=0.3, higher for Gen 3: no team preview)
+- auxiliary head enabled (aux_weight=0.2)
 - value head enabled
 - dropout 0.1
 
@@ -114,7 +114,7 @@ def aggregate(results: list[dict[str, Any]], args: argparse.Namespace) -> dict[s
             "hidden_dim": 256,
             "num_heads": 4,
             "max_window": 20,
-            "aux_weight": 0.3,
+            "aux_weight": 0.2,
             "use_value_head": True,
         },
         "train_hparams": {
@@ -175,7 +175,7 @@ def main() -> int:
             "--max-window",
             "20",
             "--aux-weight",
-            "0.3",  # Gen 3: higher weight, hidden info more critical without team preview
+            "0.2",
             "--dropout",
             str(args.dropout),
             "--batch-size",

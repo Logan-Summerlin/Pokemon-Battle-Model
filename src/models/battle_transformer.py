@@ -77,7 +77,7 @@ class TransformerConfig:
     terrain_embedding_dim: int = 8
 
     # Auxiliary hidden-info head
-    auxiliary_loss_weight: float = 0.3  # Higher weight: hidden info more critical without team preview
+    auxiliary_loss_weight: float = 0.2
     num_item_classes: int = 25  # Gen 3 item taxonomy (~25 classes)
     num_speed_buckets: int = 5
     num_role_archetypes: int = 8
@@ -167,7 +167,7 @@ class TransformerConfig:
             type_embedding_dim=12,      # Slightly smaller (no Fairy combos)
             max_seq_len=20,
             num_item_classes=25,        # Gen 3 item taxonomy
-            auxiliary_loss_weight=0.3,  # Higher: hidden info more critical without team preview
+            auxiliary_loss_weight=0.2,
         )
         base.update(kwargs)
         if vocabs is not None:
@@ -204,7 +204,7 @@ class TransformerConfig:
             type_embedding_dim=12,
             max_seq_len=5,
             num_item_classes=25,  # Gen 3 item taxonomy
-            auxiliary_loss_weight=0.3,  # Higher: hidden info more critical without team preview
+            auxiliary_loss_weight=0.2,
         )
         base.update(kwargs)
         if vocabs is not None:

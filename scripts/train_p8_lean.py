@@ -6,7 +6,7 @@ P8-Lean Gen 3 defaults:
 - FFN multiplier 3x
 - compressed embeddings (species=48, moves=24, items=16, abilities=16, types=12)
 - max window 5 (compact context for Gen 3's smaller metagame)
-- auxiliary head enabled (aux_weight=0.3, higher for Gen 3: no team preview)
+- auxiliary head enabled (aux_weight=0.2)
 - value head disabled
 - dead feature pruning enabled
 - dropout 0.1
@@ -109,7 +109,7 @@ def aggregate(results: list[dict[str, Any]], args: argparse.Namespace) -> dict[s
             "num_heads": 4,
             "ffn_multiplier": 3,
             "max_window": args.max_window,
-            "aux_weight": 0.3,
+            "aux_weight": 0.2,
             "use_value_head": False,
             "prune_dead_features": True,
             "species_embedding_dim": 48,
@@ -173,7 +173,7 @@ def main() -> int:
             "--ability-embedding-dim", "16",
             "--type-embedding-dim", "12",
             "--max-window", str(args.max_window),
-            "--aux-weight", "0.3",  # Gen 3: higher weight, hidden info more critical without team preview
+            "--aux-weight", "0.2",
             "--no-value-head",
             "--prune-dead-features",
             "--dropout", str(args.dropout),
