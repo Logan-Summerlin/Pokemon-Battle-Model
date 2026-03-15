@@ -1,7 +1,17 @@
-# Competitive Pokemon Singles Battle Strategy Guide
+# Competitive Pokemon Singles Battle Strategy Guide (Gen 3 OU / ADV)
 
-A concise reference for competitive 6v6 OU singles on Pokemon Showdown.
-Focused on decision-making, tactics, heuristics, and common pitfalls.
+_Updated: March 2026 — Adapted for Gen 3 OU (Ruby/Sapphire/Emerald)_
+
+A concise reference for competitive 6v6 OU singles on Pokemon Showdown,
+focused on Gen 3 (ADV) mechanics, decision-making, tactics, and common pitfalls.
+
+**Gen 3-specific mechanics:**
+- **No team preview** — opponent team is entirely unknown at battle start.
+- **No Terastallization** — does not exist until Gen 9.
+- **Type-based physical/special split** — move category (physical/special) is determined by type, not the individual move. All Fire moves are special; all Rock moves are physical.
+- **Permanent weather** — weather from abilities (Sand Stream, Drizzle, Drought) lasts indefinitely.
+- **No Stealth Rock** — Spikes (up to 3 layers) is the only entry hazard. No Toxic Spikes or Sticky Web.
+- **No priority priority** — Extreme Speed and Mach Punch exist but the priority move pool is smaller.
 
 ---
 
@@ -20,7 +30,7 @@ Focused on decision-making, tactics, heuristics, and common pitfalls.
 11. [Switching & Prediction](#11-switching--prediction)
 12. [Risk & Reward](#12-risk--reward)
 13. [Win Conditions & Endgame](#13-win-conditions--endgame)
-14. [Terastallization (Gen 9)](#14-terastallization-gen-9)
+14. [Gen 3-Specific Mechanics](#14-gen-3-specific-mechanics)
 15. [Common Mistakes & Bad Tactics](#15-common-mistakes--bad-tactics)
 16. [Advanced Heuristics & Rules of Thumb](#16-advanced-heuristics--rules-of-thumb)
 17. [Sources](#17-sources)
@@ -45,19 +55,22 @@ to sweep.
 
 ### The Information Game
 
-Pokemon singles is a game of **incomplete information**. You can see what species
-your opponent has at Team Preview, but you don't know their:
+Pokemon singles is a game of **incomplete information**. In Gen 3, there is
+**no team preview** — you don't know any of your opponent's Pokemon until they
+switch in. Even after seeing a Pokemon, you don't know their:
 
 - Exact EV spreads and natures
-- Held items
-- Full movesets (until revealed)
-- Tera type (Gen 9)
+- Held items (until revealed by effect or Knock Off)
+- Full movesets (until revealed move-by-move)
+- Remaining team composition (until each Pokemon switches in)
 - Planned strategy and win condition
 
-Good players extract information incrementally—through observed moves, damage
-calculations, switching patterns, and item reveals—and update their strategy
-accordingly. Resist the urge to "figure everything out" on turn 1. Information
-flows naturally over the course of a game.
+Good players extract information incrementally — through observed moves, damage
+calculations, switching patterns, and item reveals — and update their strategy
+accordingly. The lead matchup is critical in Gen 3 because it's your first
+window into the opponent's team strategy. Information flows naturally over the
+course of a game; scouting (probing with safe plays) is even more important
+without team preview.
 
 ---
 
@@ -65,62 +78,81 @@ flows naturally over the course of a game.
 
 Teams fall along a spectrum from most aggressive to most defensive:
 
+### TSS (Toxic / Spikes / Sandstorm) — The Signature Gen 3 Strategy
+
+- **Goal**: Wear down the opponent through passive damage from permanent sandstorm,
+  Spikes layers, and Toxic, then clean up with a sweeper.
+- **Structure**: Tyranitar (Sand Stream), Skarmory (Spikes), Blissey (special wall),
+  plus sweepers and a Rapid Spin blocker (Ghost-type).
+- **Strengths**: The defining Gen 3 archetype. Permanent sandstorm + 3 layers of
+  Spikes makes every switch devastating. Extremely hard to break through.
+- **Weaknesses**: Vulnerable to Rapid Spin, dedicated wallbreakers, and teams
+  with strong Spikes resistance (Flying-types, Levitate).
+- **Key principle**: Every switch your opponent makes costs them HP. Patience wins.
+
 ### Hyper Offense (HO)
 
 - **Goal**: Overwhelm the opponent with relentless pressure before they stabilize.
-- **Structure**: Suicide lead (hazards + Taunt/Explosion), 4-5 setup sweepers
-  or wallbreakers, minimal defensive investment.
+- **Structure**: Dragon Dance Salamence, Swords Dance Heracross, mixed Tyranitar,
+  Dugtrio for trapping threats, minimal defensive investment.
 - **Strengths**: Punishes passive play, forces opponent onto the back foot.
 - **Weaknesses**: Fragile; one missed prediction or unlucky turn can unravel the
-  whole game. Struggles against well-built stall.
+  whole game. Struggles against well-built TSS/stall.
 - **Key principle**: Every turn you're not attacking or setting up, you're losing.
 
-### Offense
-
-- **Goal**: Apply strong pressure while maintaining a thin defensive safety net.
-- **Structure**: Wallbreakers, sweepers, and 1-2 defensive pivots or checks.
-- **Strengths**: Flexibility—can play fast or slow depending on matchup.
-- **Weaknesses**: Less forgiving than balance if a pivot goes down early.
-
-### Bulky Offense (BO)
+### Bulky Offense
 
 - **Goal**: Wear down the opponent gradually while hitting hard.
-- **Structure**: Tanky attackers ("tanks") that can take hits and dish them out,
-  mixed with pivots and hazard support.
+- **Structure**: Salamence, Metagross, Suicune, Celebi cores with Dragon Dance
+  or Calm Mind sweepers backed by sturdy pivots.
 - **Strengths**: Excellent at trading blows; harder to sweep than HO.
 - **Weaknesses**: Can lack the raw speed to revenge kill boosted threats.
 
 ### Balance
 
 - **Goal**: Maintain stability while making incremental progress.
-- **Structure**: Defensive core + offensive threats, hazard setter + hazard
-  removal, status spreaders, pivots.
+- **Structure**: Defensive core + offensive threats, Spikes setter + Rapid Spin,
+  status spreaders, pivots.
 - **Strengths**: The most flexible archetype; can adapt to most matchups.
 - **Weaknesses**: Games tend to be longer; vulnerable to skilled wallbreakers
   that punch through the defensive core.
 - **Key principle**: Patience. You don't need to win on turn 5.
 
-### Stall / Semi-Stall
+### Stall
 
 - **Goal**: Outlast the opponent through recovery, residual damage, and PP stalling.
-- **Structure**: Walls with reliable recovery, hazard stackers, status spreaders
-  (Toxic, Will-O-Wisp), cleric support.
+- **Structure**: Skarmory/Blissey/Milotic/Celebi with Wish + Protect + Spikes,
+  cleric support, and Toxic spreading.
 - **Strengths**: Extremely hard to break for unprepared teams.
-- **Weaknesses**: Taunt, Trick, Encore, and dedicated wallbreakers shut it down.
-  Requires deep knowledge of damage ranges and when to recover vs. switch.
+- **Weaknesses**: Taunt, Trick, dedicated wallbreakers (Choice Band Metagross),
+  and Dugtrio trapping shut it down.
 - **Key principle**: You win by not losing. The opponent runs out of resources
   before you do.
 
+### Weather Teams (Rain / Sun)
+
+- **Goal**: Exploit weather-boosted sweepers for overwhelming offense.
+- **Structure**: Rain Dance + Kingdra/Ludicolo sweepers, or Sunny Day +
+  Exeggutor/Houndoom. Note: ability-set weather (Drizzle/Drought) is
+  banned in standard Gen 3 OU — only Tyranitar's Sand Stream is permanent.
+- **Strengths**: Weather-boosted attacks can be devastating; Rain gives
+  effective STAB boost to Water moves and Thunder accuracy.
+- **Weaknesses**: Requires setup turns for Rain/Sun Dance; Tyranitar's
+  permanent sandstorm overrides manual weather easily.
+
+### Baton Pass Chains
+
+- **Goal**: Chain Speed/Attack/Special Attack boosts via Baton Pass and sweep.
+- **Structure**: Ninjask (Speed Boost + Baton Pass), Smeargle (Spore + BP),
+  Celebi, and a receiver sweeper.
+- **Strengths**: Can create unstoppable sweepers when executed well.
+- **Weaknesses**: Disrupted by Roar/Whirlwind (phazing), Haze, Taunt, or
+  simply hitting the chain hard enough to break it.
+
 ### Choosing Your Archetype
 
-Your archetype should match your understanding and comfort level:
-
-- If you like fast-paced, read-heavy games: Offense or HO.
-- If you want a forgiving, adaptable style: Balance.
-- If you enjoy grinding opponents down: Stall.
-
-There is no "best" archetype. Each has favorable and unfavorable matchups against
-the others. The best players can pilot multiple styles.
+There is no "best" archetype. TSS is the most common and well-rounded in Gen 3,
+but each has favorable and unfavorable matchups against the others.
 
 ---
 
@@ -142,26 +174,30 @@ with a **core** of 2-3 Pokemon that synergize well:
 
 After your core, fill these roles (a single Pokemon can fill multiple):
 
-1. **Hazard setter** (Stealth Rock is near-mandatory)
-2. **Hazard removal** (Defog or Rapid Spin user)
-3. **Speed control** (Choice Scarf user, priority attacker, or both)
+1. **Spikes setter** (Spikes is the only entry hazard in Gen 3 — no Stealth Rock)
+2. **Rapid Spin user** (hazard removal; or a spinblocker Ghost-type to deny opponent Spin)
+3. **Speed control** (Choice Band user, Dragon Dance sweeper, or priority attacker)
 4. **Wincon/sweeper** (your primary path to victory)
-5. **Defensive check** to top metagame threats
+5. **Defensive check** to top metagame threats (Tyranitar, Salamence, Metagross)
 
 ### Type Coverage
 
 - Ensure your team isn't walled by a single type. If three of your Pokemon lose
   to Ground, you have a problem.
-- Check for common **type weaknesses**: if half your team is weak to Stealth Rock,
-  you need Boots users or a reliable Defogger.
-- Don't over-stack resistances at the expense of coverage. Six Steel-types resist
-  a lot of things but share crippling weaknesses.
+- Check for common **type weaknesses**: if half your team is weak to Spikes chip
+  damage, you need a reliable Rapid Spinner.
+- Don't over-stack resistances at the expense of coverage. Multiple Steel-types
+  resist a lot of things but share crippling weaknesses.
+- Remember the **type-based physical/special split**: in Gen 3, all Fire/Water/Grass/
+  Electric/Ice/Psychic/Dragon/Dark moves are special; all Normal/Fighting/Flying/
+  Poison/Ground/Rock/Bug/Ghost/Steel moves are physical.
 
 ### The "What Beats My Team?" Test
 
-After building, mentally run through the top 15-20 Pokemon in the metagame:
+After building, mentally run through the top 15-20 Pokemon in the Gen 3 OU metagame:
 
-- Can your team handle Kingambit? Gholdengo? Great Tusk? Dragapult?
+- Can your team handle Tyranitar? Salamence? Metagross? Suicune? Skarmory? Blissey?
+- Can you deal with Dugtrio trapping one of your key Pokemon?
 - You don't need a hard counter for everything, but you need at least a check
   (a Pokemon that can come in at least once and threaten it out or KO it).
 - If a single common Pokemon sweeps your entire team, go back and fix it.
@@ -185,7 +221,7 @@ Setup moves: Swords Dance, Dragon Dance, Calm Mind, Nasty Plot, Shell Smash,
 Quiver Dance, Agility/Rock Polish.
 
 - **Do not sweep prematurely.** Your sweeper should come in *after* its checks
-  and counters have been weakened or removed. Throwing your Dragonite into an
+  and counters have been weakened or removed. Throwing your Salamence into an
   intact team is how you lose games.
 - A sweeper should be able to KO at least 2-3 remaining Pokemon once it sets up.
 
@@ -204,15 +240,16 @@ Choice Band/Specs or Life Orb. Wallbreakers clear the way for sweepers.
 Pokemon that absorb hits and provide team utility (recovery, hazards, status,
 phazing). Defined by high defenses, reliable recovery, and favorable typing.
 
-- **Physical wall**: checks physical attackers. (e.g., Skarmory, Toxapex)
-- **Special wall**: checks special attackers. (e.g., Blissey, Clodsire)
-- **Mixed wall**: handles both somewhat. (e.g., Slowbro, Corviknight)
+- **Physical wall**: checks physical attackers. (e.g., Skarmory, Suicune, Milotic)
+- **Special wall**: checks special attackers. (e.g., Blissey, Snorlax, Regice)
+- **Mixed wall**: handles both somewhat. (e.g., Swampert, Celebi)
 
 ### Pivot
 
-A Pokemon that facilitates safe switches using U-turn, Volt Switch, Flip Turn,
-or Teleport. Pivots maintain momentum by allowing you to bring in the right
-Pokemon without taking unnecessary damage on a raw switch.
+A Pokemon that facilitates safe switches through double switching, Baton Pass,
+or simply forcing switches with threat presence. Gen 3 does not have U-turn,
+Volt Switch, or Flip Turn — pivoting relies more on prediction and defensive
+switching rather than dedicated pivot moves.
 
 ### Revenge Killer
 
@@ -243,93 +280,79 @@ keep the team healthy and functional.
 | Choice Specs | +50% Sp. Atk | Locked into one move |
 | Choice Scarf | +50% Speed | Locked into one move |
 
-- **Choice Band/Specs**: Turn wallbreakers into nuclear weapons. Click the right
-  move and 2HKO everything. Click the wrong move and your opponent gets a free
-  setup turn.
-- **Choice Scarf**: The premier revenge-killing item. Turns mid-speed Pokemon into
-  speedsters. Pairs beautifully with U-turn/Volt Switch to avoid being trapped in
-  a bad move.
+- **Choice Band**: The defining offensive item of Gen 3. Turn wallbreakers into
+  nuclear weapons. Click the right move and 2HKO everything. Click the wrong move
+  and your opponent gets a free setup turn. Metagross, Salamence, and Tyranitar
+  are premier Choice Band users.
+- **Choice Specs**: Does not exist in Gen 3 (introduced Gen 4).
+- **Choice Scarf**: Does not exist in Gen 3 (introduced Gen 4).
 - **Heuristic**: If a Pokemon has one clear "best move" and primarily wants to hit
-  things and switch out, a Choice item is ideal. If it needs to click different
+  things and switch out, Choice Band is ideal. If it needs to click different
   moves each turn, don't lock it.
 
-### Leftovers / Black Sludge
+### Leftovers
 
 - Recover 1/16 HP per turn. Seemingly small but adds up enormously on defensive
   Pokemon that stick around for many turns.
-- Black Sludge is Leftovers for Poison-types, with the added benefit of punishing
-  Trick users.
+- **The most common item in Gen 3 OU.** Almost every defensive and bulky Pokemon
+  runs Leftovers. The item pool in Gen 3 is much smaller than later gens.
 - **Heuristic**: Best on Pokemon that plan to stay in for 4+ turns at a time.
 
-### Heavy-Duty Boots
+### Lum Berry
 
-- Grants **immunity to all entry hazards** (Stealth Rock, Spikes, Toxic Spikes,
-  Sticky Web).
-- Near-mandatory on Pokemon with a Stealth Rock weakness (4x Rock-weak Pokemon
-  like Volcarona, Charizard) and on pivots/walls that switch in frequently.
-- **Heuristic**: If a Pokemon switches in more than 2-3 times per game and
-  hazards are common in the meta, consider Boots.
+- Cures any status condition once (burn, paralysis, sleep, poison, confusion).
+- Extremely common in Gen 3 — protects setup sweepers from crippling status,
+  especially Toxic and Thunder Wave. Dragon Dance Salamence with Lum Berry
+  is a Gen 3 staple.
+- **Heuristic**: Best on sweepers that need one clean setup turn.
 
-### Life Orb
+### Life Orb / Focus Sash / Assault Vest / Heavy-Duty Boots
 
-- +30% damage to all attacks at the cost of 10% HP per attack.
-- Best on Pokemon that need the flexibility to switch moves but still want
-  significant power. A middle ground between Choice items and no item.
-
-### Assault Vest
-
-- +50% Sp. Def, but can only use attacking moves.
-- Turns physically bulky attackers into mixed tanks.
-- **Heuristic**: Good on Pokemon with wide coverage and decent bulk but that
-  don't need status or support moves.
-
-### Focus Sash
-
-- Survives any single attack from full HP with 1 HP remaining.
-- Staple on suicide leads and frail sweepers that need one guaranteed setup turn.
-- Useless if hazards are up on your side—another reason hazard control matters.
+- **None of these items exist in Gen 3.** They were introduced in later generations.
+- Gen 3's item pool is much more limited: Leftovers, Choice Band, Lum Berry,
+  and type-boosting items (Charcoal, Mystic Water, etc.) dominate.
 
 ---
 
 ## 6. Key Abilities
 
-### Regenerator
+### Sand Stream (Tyranitar)
 
-- Restores ~33% HP upon switching out.
-- **Why it's elite**: Pairs perfectly with pivoting. A Regenerator Pokemon can
-  switch in, take a hit, pivot out, and come back almost as healthy as before.
-- Common users: Slowbro, Slowking, Toxapex, Tangrowth, Amoonguss.
-- **The Regenerator Core**: Pairing two Regenerator Pokemon creates a defensive
-  pivot loop that is extremely hard to break.
+- Summons permanent sandstorm upon switch-in.
+- **The defining ability of Gen 3 OU.** Permanent sandstorm deals 1/16 HP per
+  turn to all non-Rock/Ground/Steel types. This passive damage is central to
+  the TSS archetype.
+- Tyranitar is on roughly half of all Gen 3 OU teams because of Sand Stream alone.
 
 ### Intimidate
 
 - Lowers the opponent's Attack by one stage upon switch-in.
 - Essentially gives your team a free defensive buff every time you pivot.
-- Common users: Landorus-Therian, Gyarados, Incineroar.
-- Countered by Defiant (Kingambit) and Competitive (Milotic), which boost stats
-  when their stats are lowered—be aware of this before mindlessly Intimidate-cycling.
+- Common users: Salamence, Gyarados.
+- Note: Defiant and Competitive do not exist in Gen 3.
 
-### Magic Bounce
+### Arena Trap (Dugtrio) / Magnet Pull (Magneton)
 
-- Reflects status moves (Stealth Rock, Toxic, Spikes, etc.) back at the opponent.
-- A Magic Bounce Pokemon on the team prevents hazard setup entirely by its mere
-  presence, even from the bench—opponents know they risk bouncing their own rocks.
-- Common users: Hatterene, Espeon, Mega Diancie.
+- **Arena Trap** prevents grounded non-Flying opponents from switching out.
+- **Magnet Pull** prevents Steel-types from switching out.
+- Trapping is a Gen 3 signature strategy: Dugtrio eliminates key threats
+  (Tyranitar, Blissey after Focus Punch) and Magneton removes Skarmory to
+  enable physical sweepers.
+- **Heuristic**: If your sweeper is walled by one specific Pokemon, consider
+  a trapper to remove it.
 
 ### Levitate
 
 - Grants Ground immunity.
-- Tactically important because it can remove what would otherwise be a key
-  weakness, especially after Terastallization.
+- Tactically important in Gen 3 because Earthquake is the most common physical
+  move. Common users: Gengar, Claydol (also a Rapid Spinner).
 
-### Unaware
+### Natural Cure
 
-- Ignores the opponent's stat changes when calculating damage.
-- The ultimate anti-sweeper ability. A +6 boosted attacker does normal damage.
-- Common users: Clodsire, Skeledirge, Quagsire.
-- **Heuristic**: If your team lacks checks to setup sweepers, an Unaware wall
-  is a reliable safety valve.
+- Cures status conditions upon switching out.
+- Extremely strong in Gen 3 where status is prevalent and Heal Bell/Aromatherapy
+  are rare.
+- Common users: Celebi, Blissey, Starmie.
 
 ---
 
@@ -342,60 +365,39 @@ They punish switching, which is the backbone of good play. Over the course of a
 20-30 turn game with constant switching, hazards can deal more total damage than
 any individual Pokemon.
 
-### Stealth Rock
-
-- Deals damage based on type effectiveness vs. Rock.
-  - 4x weak (Fire/Flying, Bug/Flying, etc.): **50% HP** per switch-in.
-  - 2x weak: 25% HP per switch-in.
-  - Neutral: 12.5%.
-  - 1x resistant: 6.25%.
-  - 4x resistant: 3.125%.
-- **Near-universal on competitive teams.** If you're not running Stealth Rock,
-  you need a very good reason.
-- Forces opponents to either remove hazards (costing a turn) or accept the chip.
-
-### Spikes
+### Spikes — The Only Entry Hazard in Gen 3
 
 - Stacks in 3 layers: 12.5% / 16.7% / 25% per switch-in.
 - **Does not affect Flying-types or Levitate users.**
-- Most effective on stall/semi-stall teams that force many switches.
-- Stealth Rock + 2-3 layers of Spikes makes switching devastating.
+- **Stealth Rock does not exist in Gen 3** (introduced Gen 4). Spikes is the
+  only entry hazard. Toxic Spikes and Sticky Web also do not exist.
+- Spikes is central to the Gen 3 metagame — the TSS archetype revolves around
+  stacking Spikes under permanent sandstorm for devastating residual damage.
+- Common setters: Skarmory (premier), Forretress, Cloyster, Smeargle.
 
-### Toxic Spikes
+### Hazard Removal: Rapid Spin Only
 
-- 1 layer: poisons grounded switch-ins. 2 layers: badly poisons them.
-- Grounded Poison-types absorb and remove Toxic Spikes by switching in.
-- Less universally useful than Stealth Rock/Spikes but devastating against
-  teams reliant on recovery-less Pokemon.
+- **Defog does not exist as a hazard removal move in Gen 3** (introduced Gen 4).
+- **Rapid Spin** is the sole method of removing Spikes. This makes spinners
+  extremely valuable and spin-blocking extremely important.
+- Common spinners: Starmie (fast, strong), Claydol (bulky, Levitate),
+  Forretress (can both set and spin).
 
-### Sticky Web
+### Spin-Blocking
 
-- Lowers Speed by 1 stage for grounded Pokemon switching in.
-- Enables slower offensive teams to outspeed threats they normally wouldn't.
-- Niche but powerful on dedicated Sticky Web teams.
+- Ghost-types are immune to Rapid Spin and prevent it from working.
+- Keeping a Ghost-type alive to block Rapid Spin is a core Gen 3 strategy.
+- Common spinblockers: Gengar (offensive), Dusclops (defensive).
+- **Heuristic**: If your opponent has Spikes and a spinblocker, you need either
+  to KO the spinblocker first or accept the Spikes damage.
 
-### Hazard Removal: Defog vs. Rapid Spin
+### The Spikes Game
 
-| | Defog | Rapid Spin |
-|---|---|---|
-| **Removes** | All hazards on both sides | Hazards on your side only |
-| **Blocked by** | Taunt | Ghost-types |
-| **Side effect** | Removes your hazards and screens | Boosts Speed (Gen 8+) |
-| **Punished by** | Defiant/Competitive (stat boost) | Ghost-type switch-ins |
-
-- **Defog** is more universally available and can't be blocked by type immunity,
-  but it removes your own hazards—painful if you invested turns setting them up.
-- **Rapid Spin** preserves your hazards but is blocked entirely by Ghost-types
-  (unless the spinner has Mold Breaker or a Ghost-hitting move).
-- **Heuristic**: On offensive teams that rely on their own hazards, prefer Spin.
-  On teams that mainly need to keep their side clean, Defog is fine.
-
-### Hazard-Denial Strategies
-
-- **Magic Bounce**: Reflects Stealth Rock back. Opponent can't set up.
-- **Taunt**: Prevents hazard moves from being used.
-- **Spin-blocking**: Keeping a Ghost-type alive to block Rapid Spin.
-- **Defiant/Competitive**: Punishes Defog with an Attack/Sp.Atk boost.
+The Spikes game defines Gen 3 OU:
+1. Your opponent sets Spikes → you try to Rapid Spin them away.
+2. Their Ghost-type blocks your spin → you need to eliminate or lure the Ghost.
+3. You set your own Spikes → they try to spin.
+4. This back-and-forth is the strategic backbone of many Gen 3 games.
 
 ---
 
@@ -413,14 +415,16 @@ any individual Pokemon.
 - **Heuristic**: If a physical attacker is setting up on you and you can't KO it,
   burning it is often the next best option.
 
-### Paralysis (Thunder Wave, Glare, Stun Spore)
+### Paralysis (Thunder Wave, Body Slam, Stun Spore)
 
 - **Cuts Speed to 25% of original** and inflicts a 25% chance of full paralysis
   each turn.
-- Cripples fast sweepers permanently. A paralyzed Dragapult is no longer a threat
+- Cripples fast sweepers permanently. A paralyzed Salamence is no longer a threat
   from a speed perspective.
-- Ground-types are immune to Thunder Wave (but not Glare or Stun Spore).
-- Electric-types are immune to paralysis (Gen 6+).
+- Ground-types are immune to Thunder Wave (but not Body Slam or Stun Spore).
+- Note: Electric-types are NOT immune to paralysis in Gen 3 (immunity added Gen 6).
+- Body Slam's 30% paralysis chance makes it a staple on Snorlax and other
+  Normal-types in Gen 3.
 - **Heuristic**: Use Thunder Wave against fast offensive threats. Less useful
   against slow walls (they don't care about Speed loss).
 
@@ -437,11 +441,12 @@ any individual Pokemon.
 
 ### Sleep (Spore, Sleep Powder, Hypnosis)
 
-- Prevents all action for 1-3 turns (Gen 5+) or until the Pokemon switches out.
+- In Gen 3, sleep lasts 1-5 turns and the counter resets if the Pokemon switches
+  out and back in. This makes sleep much more punishing than in later gens.
 - **Sleep Clause**: In Smogon formats, only one Pokemon per team can be asleep at
   a time (via opponent's moves). This limits sleep's abuse.
 - Essentially a temporary removal of a Pokemon from the game.
-- Grass-types are immune to powder moves (Gen 6+).
+- Note: Grass-types are NOT immune to powder moves in Gen 3 (immunity added Gen 6).
 
 ### Freeze
 
@@ -450,15 +455,18 @@ any individual Pokemon.
   using a Fire-type move).
 - Not something you can build around, but something you must accept as variance.
 
-### Status Immunity Notes
+### Status Immunity Notes (Gen 3)
 
 | Status | Immune Types/Abilities |
 |--------|----------------------|
 | Burn | Fire-types |
 | Poison | Poison-types, Steel-types |
-| Paralysis | Electric-types (Gen 6+), Ground-types (vs. T-Wave) |
-| Sleep | Vital Spirit, Insomnia, Grass (vs. powder) |
-| All | Misty Terrain (grounded), Safeguard |
+| Paralysis | Ground-types (vs. T-Wave only), Limber |
+| Sleep | Vital Spirit, Insomnia |
+| All | Safeguard |
+
+Note: Many immunities from later gens (Electric immune to paralysis, Grass immune
+to powder) do not exist in Gen 3.
 
 ---
 
@@ -473,38 +481,32 @@ react. When the reverse is true, they have momentum.
 Games are a constant tug-of-war for momentum. The player who maintains momentum
 longer generally wins.
 
-### Pivoting Moves
+### Pivoting in Gen 3
 
-| Move | Type | BP | Notes |
-|------|------|-----|-------|
-| U-turn | Bug | 70 | Physical, wide distribution |
-| Volt Switch | Electric | 70 | Special, blocked by Ground-types |
-| Flip Turn | Water | 60 | Physical, niche distribution |
-| Teleport | Psychic | — | -6 priority, always switches, can't be blocked |
+Gen 3 does **not** have U-turn, Volt Switch, Flip Turn, or Teleport. These moves
+were introduced in Gen 4 or later. Pivoting in Gen 3 is fundamentally different
+from modern generations:
 
-### Fast Pivots vs. Slow Pivots
+**How pivoting works in Gen 3:**
+- **Baton Pass**: The primary "pivot move" in Gen 3, though mostly used for stat
+  passing rather than pure momentum pivoting.
+- **Double switching**: Predicting the opponent's switch and switching yourself
+  to gain the favorable matchup. This is the main way to seize momentum.
+- **Forced switches**: Using a Pokemon that threatens the opponent's active mon
+  so heavily that they must switch, then predicting the switch-in and attacking
+  accordingly.
 
-- **Fast pivot** (e.g., Dragapult U-turn): Moves first, deals chip, switches out.
-  You bring in a teammate *after* seeing what the opponent does. Best for scouting.
-- **Slow pivot** (e.g., Slowbro Teleport): Moves last, takes a hit, then switches
-  out. Your teammate comes in **without taking damage**. Best for safely bringing
-  in a frail wallbreaker or sweeper.
+### Momentum in Gen 3
 
-**Critical insight**: In a Volt-Turn war (both players pivoting), the **slower**
-pivot has the advantage. The slower Pokemon moves second, meaning their switch
-happens last, and their teammate enters the field cleanly.
+Momentum is **having the favorable matchup on the field**. Without pivot moves,
+momentum in Gen 3 is managed through:
 
-### Pivoting Heuristics
-
-1. **Don't pivot mindlessly.** Every U-turn/Volt Switch you use is a turn you
-   didn't use a stronger attack. Pivot when you need information or when the
-   incoming mon can do more than your current one.
-2. **Pivot into advantage.** The goal of a pivot is to get your threatening Pokemon
-   in for free. If there's nothing threatening to bring in, just attack.
-3. **Be wary of Ground-types vs. Volt Switch.** Ground immunizes Volt Switch,
-   meaning you deal no damage and don't switch. The opponent gets a free turn.
-4. **Regenerator makes pivoting almost free.** If your pivot has Regenerator,
-   it heals on the switch out. You can pivot repeatedly with minimal cost.
+1. **Prediction-based switching**: Anticipating the opponent's switch and bringing
+   in the correct counter.
+2. **Threat stacking**: Having multiple threats so the opponent cannot easily
+   answer all of them.
+3. **Residual damage**: Spikes + sandstorm chip means every switch costs HP,
+   making momentum shifts more expensive for the switching player.
 
 ### The Momentum Paradox
 
@@ -523,41 +525,40 @@ The faster Pokemon moves first. Moving first means you can KO before being hit,
 apply pressure before a switch, or set up before being disrupted. Speed is the
 most important stat in offensive play.
 
-### Speed Tiers
+### Speed Tiers (Gen 3 OU)
 
 The "speed tier" is where a Pokemon falls relative to the metagame's speed
-benchmarks. Key thresholds include:
+benchmarks. Key Gen 3 OU thresholds:
 
-- **Unboosted base 100-110**: The "crowded middle." Many common threats live here.
-- **Base 120+**: Naturally fast; often doesn't need a Scarf.
-- **Base 70-90**: Needs a boost (Scarf, Dragon Dance, or Agility) to sweep.
-- **Base 50 and below**: Designed for Trick Room or slow pivoting, not outspeeding.
+- **Base 110+** (Starmie 115, Aerodactyl 130, Jolteon 130): Naturally fast.
+- **Base 90-100** (Salamence 100, Celebi 100, Gengar 110): The competitive middle.
+  Dragon Dance users often start here.
+- **Base 70-80** (Tyranitar 61, Metagross 70, Heracross 85): Needs a boost to sweep.
+- **Base 50 and below** (Snorlax 30, Skarmory 70, Blissey 55): Walls; not
+  outspeeding anything.
 
-### Speed Control Methods
+### Speed Control Methods (Gen 3)
 
-1. **Choice Scarf**: +50% Speed. Turns base 80-100 Pokemon into speedsters.
-   The most common speed control tool.
-2. **Priority moves**: Bypass Speed entirely.
-   - Extreme Speed (+2), Sucker Punch (+1, fails if opponent uses status),
-     Mach Punch (+1), Bullet Punch (+1), Ice Shard (+1), Aqua Jet (+1),
-     Shadow Sneak (+1).
-   - Priority is the ultimate answer to boosted sweepers.
-3. **Setup moves**: Dragon Dance (+1 Atk, +1 Spe), Agility/Rock Polish (+2 Spe),
-   Shell Smash (+2 Atk/SpA/Spe, -1 Def/SpD), Quiver Dance (+1 SpA/SpD/Spe).
-4. **Tailwind**: Doubles team speed for 4 turns. More common in doubles but
-   usable in singles.
-5. **Trick Room**: Reverses speed order for 5 turns. Niche in 6v6 singles but
-   devastating when it works.
-6. **Sticky Web**: -1 Speed to grounded opponents switching in.
-7. **Thunder Wave / Paralysis**: Permanent 75% speed cut.
+1. **Dragon Dance**: +1 Atk, +1 Spe. The premier setup move in Gen 3.
+   Salamence and Tyranitar are the main users.
+2. **Agility / Rock Polish**: +2 Speed. Metagross with Agility is a notable threat.
+   (Note: Rock Polish does not exist in Gen 3, only Agility.)
+3. **Priority moves**: Limited pool in Gen 3.
+   - Extreme Speed (+2): Linoone is the notable user.
+   - Mach Punch (+1): Breloom, Hitmonchan.
+   - Quick Attack (+1): Generally too weak to matter.
+   - Note: Sucker Punch, Bullet Punch, Ice Shard, Aqua Jet do NOT exist in Gen 3.
+4. **Thunder Wave / Paralysis**: Permanent 75% speed cut. Very common in Gen 3.
+5. **Choice Scarf does NOT exist in Gen 3** (introduced Gen 4). This makes speed
+   control more limited — Dragon Dance and paralysis are the primary tools.
+6. **Trick Room does NOT exist in Gen 3** (introduced Gen 4).
 
 ### Speed Control Heuristics
 
 - Every team needs at least one form of speed control. Without it, a +1 Dragon
-  Dance sweeper runs through you unchecked.
-- Choice Scarf + a priority user gives you two independent speed control layers.
-  This redundancy is valuable.
-- Know your speed tiers. Know what outspeeds what at +1, with Scarf, etc.
+  Dance Salamence runs through you unchecked.
+- Dragon Dance + paralysis support gives you two independent speed control layers.
+- Know your speed tiers. Know what outspeeds what at +1 Dragon Dance.
   Miscalculating speed tiers is a common cause of lost games.
 
 ---
@@ -611,9 +612,9 @@ different from in-game play where you rarely switch.
    prediction of your prediction. This infinite recursion is a trap. At lower
    levels of play, most opponents make the obvious play. At higher levels,
    the game becomes more about reads.
-5. **Pattern recognition matters.** If an opponent has switched Corviknight into
-   your wallbreaker three times, they'll probably do it a fourth. That's when
-   you predict with a Fire-type coverage move.
+5. **Pattern recognition matters.** If an opponent has switched Skarmory into
+   your physical wallbreaker three times, they'll probably do it a fourth. That's
+   when you predict with a Fire-type or Electric-type coverage move.
 6. **Consider the opponent's perspective.** What would *you* do in their position?
    What is the "correct" play for them? That's likely what they'll do.
 
@@ -625,7 +626,7 @@ different from in-game play where you rarely switch.
 2. **Switch early, not late.** If a Pokemon needs to come in to check a threat,
    bring it in while it's healthy. Waiting until it's at 30% HP makes it useless
    as a check.
-3. **Keep your checks healthy.** If your Toxapex is your only answer to Kingambit,
+3. **Keep your checks healthy.** If your Skarmory is your only answer to Salamence,
    don't recklessly let it take unnecessary chip. Preserve it.
 4. **Don't be afraid to sack.** Sometimes the right play is to let a less
    important Pokemon faint rather than switch and take damage on your key mon.
@@ -657,7 +658,7 @@ disciplined player evaluates each option through this lens:
 ### When to Take Risks
 
 - **When behind and the "safe" play leads to a slow loss**: If playing safe means
-  you lose to their Kingambit in 5 turns, take a risk now.
+  you lose to their Tyranitar in 5 turns, take a risk now.
 - **When one read wins the game**: If hitting their switch-in eliminates their
   only check to your sweeper, go for it.
 - **On forced turns**: After your Pokemon faints, you get a free switch—use this
@@ -686,8 +687,8 @@ opponent options, just do the safe play.
 
 ### Identifying Your Win Condition
 
-At Team Preview (and continuously throughout the game), ask: **"Which of my
-Pokemon can this opposing team least handle?"**
+Throughout the game (no team preview in Gen 3), as the opponent reveals their
+team, continuously ask: **"Which of my Pokemon can their revealed team least handle?"**
 
 That Pokemon is your win condition. Everything else on your team should work
 toward getting it into a position to sweep:
@@ -707,8 +708,8 @@ A sweep is not improvised—it's the culmination of a plan executed over many tu
    Don't start your sweep until the coast is clear.
 3. **Choose the right moment**: Set up when the opponent is forced to use a weak
    attack, when they're switching, or when their check has been removed.
-4. **Don't get greedy**: Sometimes +1 is enough to sweep. Don't go for +2 if it
-   means risking a crit or a faster revenge killer.
+4. **Don't get greedy**: Sometimes +1 Dragon Dance is enough to sweep. Don't go
+   for +2 if it means risking a crit or a faster revenge killer.
 
 ### When Your Win Condition Fails
 
@@ -736,59 +737,58 @@ In the endgame (2-3 Pokemon remaining each side), every turn is critical:
 
 ---
 
-## 14. Terastallization (Gen 9)
+## 14. Gen 3-Specific Mechanics
 
-### How It Works
+### The Physical/Special Split by Type
 
-- Once per battle, a Pokemon can change its type to its predetermined Tera type.
-- The new type persists even through switches and until the Pokemon faints.
-- STAB mechanics: Original STAB moves keep 1.5x. Tera-type moves also get 1.5x.
-  If Tera matches an original type, that STAB becomes 2x (Adaptability-like).
+In Gen 3, whether a move is physical or special is determined by its **type**,
+not the individual move:
 
-### Offensive Tera
+| Category | Types |
+|----------|-------|
+| **Physical** | Normal, Fighting, Flying, Poison, Ground, Rock, Bug, Ghost, Steel |
+| **Special** | Fire, Water, Grass, Electric, Ice, Psychic, Dragon, Dark |
 
-- **Same-type Tera** (e.g., Tera Fire on a Fire-type): Maximizes damage on your
-  best STAB. Turns strong hits into nuclear hits.
-- **Coverage Tera** (e.g., Tera Ground on a Pokemon with Earthquake): Gives STAB
-  to a coverage move, letting you break through Pokemon that would normally wall
-  you.
-- **Tera Blast**: A universal move (80 BP) that becomes the Tera type and uses
-  the higher attacking stat. Enables surprise coverage.
+This has major implications:
+- A Pokemon with high Attack but a special-type STAB (e.g., Gyarados with Water)
+  cannot use its STAB moves effectively from the physical side.
+- Mixed attackers are rare because type dictates category. You can't have a
+  "physical Fire move" — all Fire moves are special.
+- This creates unique niches: Swampert uses Earthquake (physical Ground) as its
+  primary STAB despite also being Water-type, because Water moves are special
+  and Swampert's Attack is higher.
 
-### Defensive Tera
+### Permanent Weather
 
-- **Removing weaknesses**: Tera Steel on a Dragon to remove Ice/Fairy weakness.
-  Tera Flying on a Fighting-weak Pokemon to gain immunity to Ground.
-- **Gaining immunities**: Tera Ghost for Normal/Fighting immunity. Tera Ground
-  on a Levitate user for effective zero weaknesses.
-- **Surviving a KO**: Tera into a type that resists the incoming attack to survive
-  what would otherwise be a OHKO.
+Weather from abilities lasts **indefinitely** in Gen 3 (in later gens it lasts
+5 turns):
+- **Sand Stream** (Tyranitar): Permanent sandstorm. The defining weather of Gen 3 OU.
+  Deals 1/16 HP per turn to non-Rock/Ground/Steel types.
+- **Drizzle** (Kyogre) and **Drought** (Groudon): Banned in OU (Ubers only).
+- Manual weather (Rain Dance, Sunny Day) still lasts 5 turns and can override
+  Sand Stream, but Tyranitar can simply switch back in to reset sandstorm.
 
-### Tera Timing Heuristics
+### No Team Preview
 
-1. **Don't Tera early without a clear reason.** Tera is a one-time resource.
-   Using it on turn 2 means you can't use it for the rest of the game.
-2. **Tera is strongest when it flips an expected outcome.** The opponent expects
-   to KO your Pokemon or wall it—Tera changes the calculation entirely.
-3. **Tera is often best on your win condition.** Using Tera to let your sweeper
-   survive a revenge kill attempt or break through its last check is typically
-   the highest-value use.
-4. **Don't Tera reactively without thinking ahead.** Surviving one hit is nice,
-   but if your new type leaves you vulnerable to everything else the opponent has,
-   you've just traded one problem for another.
-5. **Track whether the opponent has Tera'd.** If they haven't, factor in that
-   any of their Pokemon could change type. This uncertainty is itself a weapon.
+Gen 3 has no team preview. You enter the battle knowing nothing about your
+opponent's team. This means:
+- **Lead selection is blind** — you pick your lead based on metagame trends,
+  not specific team information.
+- **Scouting is critical** — the first few turns are about gathering information.
+  Safe plays early are more valuable than aggressive predictions.
+- **Hidden information is maximal** — your opponent's full team, items, moves,
+  and abilities are all unknown until revealed through gameplay.
 
-### The Tera Dilemma
+### Key Moves That Don't Exist in Gen 3
 
-The player who Tera's first often loses a strategic advantage: the opponent now
-knows your Tera type, while you still don't know theirs. This creates a game of
-chicken—both players want the other to Tera first.
-
-- **Aggressive Tera** (early) is better when you can generate an overwhelming
-  advantage from it (e.g., sweep immediately after Tera).
-- **Reactive Tera** (defensive survival) is often lower-value because it doesn't
-  generate offensive advantage.
+Many staples of modern competitive Pokemon do not exist:
+- **No Stealth Rock** (introduced Gen 4)
+- **No U-turn, Volt Switch, Flip Turn** (introduced Gen 4+)
+- **No Scald** (introduced Gen 5)
+- **No Knock Off** as a viable damage move (only 20 BP in Gen 3)
+- **No Defog** as hazard removal (introduced Gen 4)
+- **No Sucker Punch, Bullet Punch, Ice Shard, Aqua Jet** (introduced Gen 4)
+- **No Choice Scarf or Choice Specs** (introduced Gen 4)
 
 ---
 
@@ -797,18 +797,18 @@ chicken—both players want the other to Tera first.
 ### Team Building Errors
 
 1. **All-offense teams**: Filling your team with sweepers sounds great until a
-   single Dragon Dance Gyarados at +1 sweeps your entire team because nothing
+   single Dragon Dance Salamence at +1 sweeps your entire team because nothing
    can take a hit. You need defensive checks.
-2. **No hazard removal**: Stealth Rock is on nearly every team. If you can't
-   remove it, your Pokemon lose 12-50% HP every time they switch in. Over a
-   20-turn game, that's lethal.
+2. **No Rapid Spinner**: Spikes stack up fast. If you can't remove them, your
+   Pokemon lose 12-25% HP every time they switch in. Over a 20-turn game,
+   that's lethal — especially under permanent sandstorm.
 3. **Type-stacking**: Three Water-types on one team means a single Grass- or
    Electric-type can check half your team. Diversify your typing.
-4. **Building around a single gimmick**: Trick Room teams, dedicated weather
-   teams, or Baton Pass chains can be devastating when they work but crumble
-   when the opponent has a single counter. Have a Plan B.
+4. **Building around a single gimmick**: Baton Pass chains or Rain Dance teams
+   can be devastating when they work but crumble when the opponent has a single
+   counter (Roar, Whirlwind, Tyranitar's Sand Stream). Have a Plan B.
 5. **Ignoring the metagame**: Building your team in a vacuum without considering
-   what's popular leads to teams that auto-lose to common threats.
+   what's popular leads to teams that auto-lose to common threats like Tyranitar.
 
 ### In-Battle Errors
 
@@ -824,7 +824,7 @@ chicken—both players want the other to Tera first.
 10. **Over-predicting** (see Section 12): Trying to be clever when the simple
     play is correct. The straightforward move is right more often than the
     galaxy-brain read.
-11. **Throwing away your win condition**: Your +1 Dragonite is your path to
+11. **Throwing away your win condition**: Your +1 Salamence is your path to
     victory, so you recklessly leave it in against a potential Ice Beam.
     Protect your win condition at all costs.
 12. **Not sacking when you should**: Sometimes a Pokemon has served its purpose.
@@ -869,41 +869,44 @@ chicken—both players want the other to Tera first.
 - **Rotate your checks.** Don't send the same Pokemon into the same threat
   repeatedly if it's taking heavy chip. Spread the damage across multiple
   resistances when possible.
-- **Consider what happens *after* you switch.** Bringing in Corviknight against
-  the Rillaboom is great—but what if they predict and go Heatran? Think one
-  step ahead.
+- **Consider what happens *after* you switch.** Bringing in Skarmory against
+  the Heracross is great—but what if they predict and use Hidden Power Fire?
+  Think one step ahead.
 
 ### Resource Management
 
 - **HP is a resource, not a health bar.** Taking 30% damage to deal 60% is a
   good trade. Taking 30% to accomplish nothing is a waste. Every point of HP
-  should be spent on something.
+  should be spent on something — especially in Gen 3 where sandstorm + Spikes
+  chip makes every HP point precious.
 - **PP is a resource.** In stall matchups, tracking the opponent's remaining PP
-  on key moves (recovery, coverage) can determine who wins.
-- **Tera is a resource.** (See Section 14.) Don't spend it frivolously.
+  on key moves (recovery, coverage) can determine who wins. PP stalling is a
+  legitimate Gen 3 strategy.
 - **Your Pokemon are a resource.** You have six. Losing one to gain a massive
   positional advantage is often correct.
 
 ### Opponent Modeling
 
 - **Play the metagame, not the opponent.** Early in a game, assume standard sets
-  and standard play. Adjust as you gather information.
-- **Pay attention to what they reveal.** If their Garchomp uses Swords Dance on
-  turn 3, it's probably not Choice Scarf. If their Heatran takes 35% from a
-  neutral hit, it's probably not specially defensive.
-- **Look for what's missing.** At Team Preview, they have no obvious hazard
-  removal. That means hazards are extra valuable against them—prioritize getting
-  Stealth Rock up and keeping it up.
-- **Respect coverage.** "Kingambit is walled by my Corviknight" is true until
-  Kingambit reveals Iron Head or Tera Fire. Don't rely on a single check without
+  and standard play. Adjust as you gather information. In Gen 3 without team
+  preview, this means assuming your opponent has common threats until proven
+  otherwise.
+- **Pay attention to what they reveal.** If their Metagross uses Agility on
+  turn 3, it's not Choice Band. If their Tyranitar takes 35% from a neutral
+  special hit, it's probably specially defensive.
+- **Look for what's missing.** As Pokemon are revealed, note what they're missing.
+  No Rapid Spinner seen yet? Spikes will be devastating. No obvious
+  special wall? Your special attackers can go to work.
+- **Respect coverage.** "Tyranitar is walled by my Swampert" is true until
+  Tyranitar reveals Hidden Power Grass. Don't rely on a single check without
   considering the possibility of coverage moves.
 
 ### Positional Play
 
 - **Trades favor the player with more remaining win conditions.** If you have two
   ways to win and they have one, trading Pokemon 1-for-1 is great for you.
-- **Don't trade your check for their non-threat.** If your Toxapex trades with
-  their Amoonguss but their Kingambit is still alive, you just lost the game.
+- **Don't trade your check for their non-threat.** If your Skarmory trades with
+  their Forretress but their Salamence is still alive, you just lost the game.
 - **Force 50/50s when behind, avoid them when ahead.** If you're winning, don't
   give the opponent a coin-flip opportunity to equalize. If you're losing,
   50/50s are better than a guaranteed slow loss.
@@ -914,11 +917,10 @@ chicken—both players want the other to Tera first.
 ### Pattern Recognition
 
 - **Most opponents follow patterns.** They switch the same Pokemon into the same
-  threat, they lead with the same Pokemon, they Tera at the same moment. Exploit
-  these patterns when you spot them.
+  threat, they lead with the same Pokemon. Exploit these patterns when you spot them.
 - **Varying your own patterns is equally important.** If you always switch
-  Toxapex into their Volcarona, they'll start predicting it and clicking
-  Psychic. Mix it up.
+  Skarmory into their Heracross, they'll start predicting it and using a
+  coverage move. Mix it up.
 - **The most common play is the most common play for a reason.** It's usually
   correct. Don't be contrarian for the sake of it.
 
@@ -939,24 +941,20 @@ aggressive, reckless play in the long run.
 
 ## 17. Sources
 
+### Gen 3 OU-Specific Resources
+- [ADV OU Overview - Smogon Strategy Dex](https://www.smogon.com/dex/rs/formats/ou/)
 - [Introduction to Competitive Pokemon - Smogon University](https://www.smogon.com/dp/articles/intro_comp_pokemon)
 - [Getting Started with Competitive Battling - Smogon University](https://www.smogon.com/articles/getting-started)
+
+### General Competitive Strategy
 - [Teambuilding Guide - Smogon Forums](https://www.smogon.com/forums/threads/teambuilding-guide.3552468/)
-- [Building Hyper Offense in OU - Smogon University](https://www.smogon.com/articles/hyper-offense-in-ou)
 - [Risk/Reward - Smogon University](https://www.smogon.com/bw/articles/bw_risk_reward)
-- [Pivots in SM OU - Smogon University](https://www.smogon.com/articles/pivots-sm-ou)
-- [VoltTurn in OU - Smogon University](https://www.smogon.com/articles/voltturn-in-ou)
 - [Momentum - Smogon Forums](https://www.smogon.com/forums/threads/momentum.3450730/)
 - [Battle Tactics: Double Switches - Smogon Forums](https://www.smogon.com/forums/threads/battle-tactics-double-switches.51714/)
 - [Entry Hazards in OU - Smogon University](https://www.smogon.com/smog/issue44/entry-hazards-in-ou)
-- [OU: Clearing Up Some Facts With Defog - Smogon University](https://www.smogon.com/smog/issue37/ou-defog)
 - [Status in RU - Smogon University](https://www.smogon.com/smog/issue26/ru_status)
-- [Revenge Killers in RU - Smogon University](https://www.smogon.com/articles/revenge-killers-ru)
 - [Boosting Them Up: Setup Sweepers in OU - Smogon University](https://www.smogon.com/articles/ou-setup-sweepers)
-- [Setup for Success: Setup Sweepers in LC - Smogon University](https://www.smogon.com/articles/lc-setup-sweepers)
-- [Choice Scarf: Role in the Meta - Smogon Forums](https://www.smogon.com/forums/threads/choice-scarf-role-in-the-meta.3500909/)
 - [Pokemon Battling: A Lesson in Game Theory - Smogon Forums](https://www.smogon.com/forums/threads/pokemon-battling-a-lesson-in-game-theory.3492697/)
-- [Terastallization Tiering Discussion - Smogon Forums](https://www.smogon.com/forums/threads/terastallization-tiering-discussion.3711464/)
 - [Competitive Battle Tactics Guide - Pokemon Lazarus](https://pokemonlazarus.org/walkthrough/competitive-battle-tactics)
 - [Predictions in Competitive Battling - PokeCommunity Daily](https://daily.pokecommunity.com/2016/06/04/predictions-competitive-battling/)
 - [Common Mistakes in Competitive Pokemon - PokeBeach](https://www.pokebeach.com/2024/02/the-most-common-mistakes-in-competitive-pokemon-and-how-to-avoid-them)

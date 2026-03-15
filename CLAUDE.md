@@ -1,12 +1,13 @@
 # Pokemon Battle Model
 
-Structured transformer for Gen 9 OU singles on Pokemon Showdown. Behavior cloning on human replay data with hidden-information-aware architecture.
+Structured transformer for Gen 3 OU (ADV) singles on Pokemon Showdown. Behavior cloning on human replay data with hidden-information-aware architecture.
 
 ## Architecture
 - **BattleTransformer** (`src/models/battle_transformer.py`): 14 tokens/turn (6 own + 6 opponent + field + context), transformer encoder, candidate-action-scoring policy head
 - **Auxiliary head**: predicts opponent hidden info (items, speed tier, role, move families) from encoder output
-- **Action space**: 13 canonical actions (4 moves + 4 tera-moves + 5 switches), legal mask applied before softmax
-- **Observation**: per-pokemon 30 dims (9 categorical + 14 continuous + 7 binary), total flat input 384 dims
+- **Action space**: 9 canonical actions (4 moves + 5 switches), legal mask applied before softmax
+- **Observation**: per-pokemon 28 dims (9 categorical + 14 continuous + 5 binary), field 19 dims, context 7 dims
+- **No team preview**: Gen 3 has no team preview — opponent team entirely unknown at battle start
 
 ## Hidden Information Doctrine (Non-Negotiable)
 1. Never train on omniscient features unavailable at decision time
@@ -17,7 +18,7 @@ Structured transformer for Gen 9 OU singles on Pokemon Showdown. Behavior clonin
 ## Training
 - Core trainer: `scripts/train_phase4.py` with wrapper scripts for specific configs
 - Current variants: P8 (4L/256d/4H, 3.6M params), P8-Lean (3L/224d/4H, ~1.95M), P4 (6L/384d/6H, 11.5M)
-- Data: Metamon dataset, 10K battles processed, 80/10/10 battle-level splits
+- Data: Metamon dataset (gen3ou), 10K battles processed, 80/10/10 battle-level splits, 1300+ Elo
 - Pipeline: `.npz` tensors → `WindowedTurnDataset` → per-turn examples with sliding window
 - Loss: masked cross-entropy (policy) + auxiliary loss (weighted 0.2)
 
@@ -32,6 +33,7 @@ Structured transformer for Gen 9 OU singles on Pokemon Showdown. Behavior clonin
 - Phases 0–3 complete (env, data pipeline, baselines)
 - Phase 4 in progress (transformer model, experiments, optimization)
 - Phases 5–8 not started (synthetic fine-tuning, evaluation harness, offline RL, enhancements)
+- Migrated from Gen 9 OU to Gen 3 OU (March 2026)
 
 ## Testing
 ```bash
