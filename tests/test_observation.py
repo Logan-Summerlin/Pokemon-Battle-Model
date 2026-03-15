@@ -78,7 +78,6 @@ def make_turn(
         player_prev_move=ParsedMove(name=player_prev_move) if player_prev_move else None,
         opponent_prev_move=ParsedMove(name=opponent_prev_move) if opponent_prev_move else None,
         weather=weather,
-        can_tera=False,  # Gen 3: no Terastallization
         battle_won=battle_won,
         battle_lost=battle_lost,
         opponent_teampreview=opponent_teampreview or [],
@@ -162,12 +161,6 @@ class TestObservationConstruction:
         battle.turns[0] = make_turn(weather="RainDance")
         obs = build_observations(battle)
         assert obs[0].field.weather == "RainDance"
-
-    def test_can_tera_always_false_gen3(self) -> None:
-        """Gen 3 does not have Terastallization; can_tera should always be False."""
-        battle = make_battle(num_turns=2)
-        obs = build_observations(battle)
-        assert obs[0].can_tera is False
 
     def test_action_taken_recorded(self) -> None:
         battle = make_battle(num_turns=3)

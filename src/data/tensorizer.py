@@ -357,7 +357,7 @@ def tensorize_turn(
     # Field
     field = tensorize_field(obs.field, vocabs, build_vocab)
 
-    # Context features (Gen 3: no can_tera)
+    # Context features
     context = np.zeros(CONTEXT_FEATURE_DIM, dtype=np.float32)
     context[0] = obs.turn_number / 100.0  # Normalize turn number
     context[1] = obs.opponents_remaining / 6.0

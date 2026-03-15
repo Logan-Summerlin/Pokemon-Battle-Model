@@ -6,8 +6,8 @@ suitable for tensorization. Enforces the Hidden Information Doctrine:
 - Opponent team has only what has been revealed up to this turn
 - Unknown values use explicit "unknown" markers
 
-Supports both Gen 9 (team preview, tera) and Gen 3 (no team preview,
-no tera, no terrain, permanent weather) formats.
+Supports both Gen 9 (team preview) and Gen 3 (no team preview,
+no terrain, permanent weather) formats.
 
 The observation at turn t contains:
 - Own team: species, HP fraction, status, boosts, moves, item, ability
@@ -43,11 +43,9 @@ class PokemonObservation:
     is_fainted: bool = False
     # Moves (up to 4)
     moves: list[str] = dc_field(default_factory=list)
-    # Item / ability / tera
+    # Item / ability
     item: str = UNKNOWN
     ability: str = UNKNOWN
-    tera_type: str = UNKNOWN
-    terastallized: bool = False
     # Stat boosts
     boosts: dict[str, int] = dc_field(default_factory=dict)
     # Base stats (own pokemon only; 0 for opponent = unknown)
@@ -111,8 +109,6 @@ class TurnObservation:
     # Previous actions for context
     prev_player_move: str = ""
     prev_opponent_move: str = ""
-    # Can terastallize (always False for Gen 3)
-    can_tera: bool = False
     # Forced switch
     forced_switch: bool = False
     # Number of opponent Pokemon remaining
@@ -168,8 +164,6 @@ def _pokemon_to_own_observation(
         moves=[m.name for m in poke.moves if m.name],
         item=poke.item or UNKNOWN,
         ability=poke.ability or UNKNOWN,
-        tera_type=poke.tera_type or UNKNOWN,
-        terastallized=False,  # Inferred from state
         boosts={
             "atk": poke.atk_boost,
             "def": poke.def_boost,
@@ -228,8 +222,6 @@ def _pokemon_to_opponent_observation(
         # Item/ability: only if revealed
         item=revealed_item,
         ability=revealed_ability,
-        tera_type=UNKNOWN,  # Only revealed when used
-        terastallized=False,
         boosts={
             "atk": poke.atk_boost,
             "def": poke.def_boost,
@@ -319,8 +311,6 @@ class OpponentTracker:
         self.revealed_items: dict[str, str] = {}
         # species -> revealed ability
         self.revealed_abilities: dict[str, str] = {}
-        # species -> revealed tera type
-        self.revealed_tera: dict[str, str] = {}
         # Ordered list of opponent species revealed (by switch-in), for no-team-preview gens
         self.revealed_species: list[str] = []
         # species -> last known ParsedPokemon state (for building bench observations)
@@ -382,9 +372,6 @@ class OpponentTracker:
 
     def get_revealed_ability(self, species: str) -> str:
         return self.revealed_abilities.get(species, UNKNOWN)
-
-    def get_revealed_tera(self, species: str) -> str:
-        return self.revealed_tera.get(species, UNKNOWN)
 
     def get_last_known_state(self, species: str) -> ParsedPokemon | None:
         """Get the last known state for a previously revealed opponent Pokemon."""
@@ -575,9 +562,6 @@ def build_observations(battle: ParsedBattle) -> list[TurnObservation]:
         # Build legal action mask based on available actions
         legal_mask = _build_legal_mask(turn)
 
-        # Tera does not exist in Gen 3
-        can_tera = False
-
         obs = TurnObservation(
             turn_number=t,
             own_team=own_team_obs[:MAX_TEAM_SIZE],
@@ -585,7 +569,6 @@ def build_observations(battle: ParsedBattle) -> list[TurnObservation]:
             field=field_obs,
             action_taken=action_taken,
             legal_action_mask=legal_mask,
-            can_tera=can_tera,
             forced_switch=turn.forced_switch,
             opponents_remaining=turn.opponents_remaining,
             num_opponent_revealed=tracker.num_revealed,

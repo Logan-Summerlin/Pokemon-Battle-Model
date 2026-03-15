@@ -593,7 +593,7 @@ class AuxiliaryHead(nn.Module):
     """Predicts hidden opponent information from encoder output.
 
     For each opponent pokemon slot, predicts:
-    - Item class (categorical, top-50)
+    - Item class (categorical, 25 classes for Gen 3)
     - Speed bucket (ordinal, 5 classes)
     - Role archetype (categorical, 8 classes)
     - Threat profile (joint speed-bucket x role-archetype)
@@ -893,7 +893,7 @@ def compute_auxiliary_loss(
 
     Args:
         aux_preds: Dict with keys item_logits, speed_logits, role_logits,
-                  tera_logits, move_family_logits. Each (batch, 6, num_classes).
+                  move_family_logits. Each (batch, 6, num_classes).
         aux_targets: Dict with matching keys, targets as class indices or
                     multi-hot for move families. Use -1 for unknown/masked.
 

@@ -87,7 +87,6 @@ def make_turn_obs(
         opponent_team=opp,
         field=FieldObservation(),
         action_taken=action,
-        can_tera=False,  # Gen 3: no Terastallization
         game_won=game_won,
     )
 
