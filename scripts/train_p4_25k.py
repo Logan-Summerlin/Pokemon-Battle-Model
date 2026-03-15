@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Train the Phase 4 P4 model on a 25,000-battle replay cohort.
+"""Train the Phase 4 P4 model on a 25,000-battle Gen 3 OU replay cohort.
 
-P4 configuration from docs/PHASE4_25K_COMPUTE_GENERALIZATION_EXPERIMENT.md:
+P4 Gen 3 configuration:
 - 6 layers / 384 hidden dim / 6 heads
 - max window 20
-- auxiliary head enabled (aux_weight=0.2)
+- auxiliary head enabled (aux_weight=0.3, higher for Gen 3: no team preview)
 - value head enabled
+- dropout 0.15 (stronger regularization for Gen 3's potentially smaller dataset)
 
 This wrapper launches scripts/train_phase4.py for one or more seeds, then
 creates an aggregated benchmark summary JSON suitable for cross-model
@@ -45,7 +46,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--weight-decay", type=float, default=0.01)
     parser.add_argument("--warmup-steps", type=int, default=300)
     parser.add_argument("--grad-accum", type=int, default=1)
-    parser.add_argument("--dropout", type=float, default=0.1)
+    parser.add_argument("--dropout", type=float, default=0.15)  # Gen 3: stronger regularization for smaller dataset
     parser.add_argument("--num-workers", type=int, default=None)
     parser.add_argument("--prefetch-factor", type=int, default=4)
     parser.add_argument("--persistent-workers", action="store_true")
@@ -54,7 +55,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-pin-memory", action="store_true")
     parser.add_argument("--non-blocking-transfer", action="store_true")
     parser.add_argument("--blocking-transfer", action="store_true")
-    parser.add_argument("--output-root", type=str, default="checkpoints/phase4_p4_25k")
+    parser.add_argument("--output-root", type=str, default="checkpoints/phase4_gen3_p4_25k")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without executing")
     return parser.parse_args()
 
@@ -107,14 +108,14 @@ def aggregate(results: list[dict[str, Any]], args: argparse.Namespace) -> dict[s
     wall = [r["wall_time_min"] for r in results if r.get("wall_time_min") is not None]
 
     return {
-        "experiment": "phase4_p4_25k",
+        "experiment": "phase4_gen3_p4_25k",
         "created_at": datetime.now(UTC).isoformat(),
         "p4_config": {
             "num_layers": 6,
             "hidden_dim": 384,
             "num_heads": 6,
             "max_window": 20,
-            "aux_weight": 0.2,
+            "aux_weight": 0.3,
             "use_value_head": True,
         },
         "train_hparams": {
@@ -175,7 +176,7 @@ def main() -> int:
             "--max-window",
             "20",
             "--aux-weight",
-            "0.2",
+            "0.3",  # Gen 3: higher weight, hidden info more critical without team preview
             "--dropout",
             str(args.dropout),
             "--batch-size",

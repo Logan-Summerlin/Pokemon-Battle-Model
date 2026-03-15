@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Train the P8-Lean model from PARAMETER_REDUCTION_PROPOSAL.
+"""Train the P8-Lean model for Gen 3 OU.
 
-P8-Lean defaults:
+P8-Lean Gen 3 defaults:
 - 3 layers / 224 hidden dim / 4 heads
 - FFN multiplier 3x
 - compressed embeddings (species=48, moves=24, items=16, abilities=16, types=12)
-- max window 5 (P8-fast efficiency carry-over)
-- auxiliary head enabled (aux_weight=0.2)
+- max window 5 (compact context for Gen 3's smaller metagame)
+- auxiliary head enabled (aux_weight=0.3, higher for Gen 3: no team preview)
 - value head disabled
 - dead feature pruning enabled
+- dropout 0.15 (stronger regularization for Gen 3's potentially smaller dataset)
 """
 
 from __future__ import annotations
@@ -39,7 +40,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--warmup-steps", type=int, default=300)
     parser.add_argument("--grad-accum", type=int, default=1)
     parser.add_argument("--max-window", type=int, default=5)
-    parser.add_argument("--dropout", type=float, default=0.1)
+    parser.add_argument("--dropout", type=float, default=0.15)  # Gen 3: stronger regularization for smaller dataset
     parser.add_argument("--num-workers", type=int, default=None)
     parser.add_argument("--prefetch-factor", type=int, default=4)
     parser.add_argument("--persistent-workers", action="store_true")
@@ -48,7 +49,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-pin-memory", action="store_true")
     parser.add_argument("--non-blocking-transfer", action="store_true")
     parser.add_argument("--blocking-transfer", action="store_true")
-    parser.add_argument("--output-root", type=str, default="checkpoints/phase4_p8_lean")
+    parser.add_argument("--output-root", type=str, default="checkpoints/phase4_gen3_p8_lean")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without executing")
     return parser.parse_args()
 
@@ -100,7 +101,7 @@ def aggregate(results: list[dict[str, Any]], args: argparse.Namespace) -> dict[s
     wall = [r["wall_time_min"] for r in results if r.get("wall_time_min") is not None]
 
     return {
-        "experiment": "phase4_p8_lean",
+        "experiment": "phase4_gen3_p8_lean",
         "created_at": datetime.now(UTC).isoformat(),
         "p8_lean_config": {
             "num_layers": 3,
@@ -108,7 +109,7 @@ def aggregate(results: list[dict[str, Any]], args: argparse.Namespace) -> dict[s
             "num_heads": 4,
             "ffn_multiplier": 3,
             "max_window": args.max_window,
-            "aux_weight": 0.2,
+            "aux_weight": 0.3,
             "use_value_head": False,
             "prune_dead_features": True,
             "species_embedding_dim": 48,
@@ -172,7 +173,7 @@ def main() -> int:
             "--ability-embedding-dim", "16",
             "--type-embedding-dim", "12",
             "--max-window", str(args.max_window),
-            "--aux-weight", "0.2",
+            "--aux-weight", "0.3",  # Gen 3: higher weight, hidden info more critical without team preview
             "--no-value-head",
             "--prune-dead-features",
             "--dropout", str(args.dropout),

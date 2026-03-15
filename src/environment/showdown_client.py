@@ -42,7 +42,7 @@ class ShowdownConfig:
     battle_timeout: float = 300.0  # 5 minutes max per battle
 
     # Battle settings
-    format: str = "gen9ou"
+    format: str = "gen3ou"
     team: str = ""  # Team in packed format
 
     @property
@@ -183,7 +183,7 @@ class ShowdownClient:
         return room_id
 
     async def challenge(
-        self, opponent: str, format: str = "gen9ou", team: str = ""
+        self, opponent: str, format: str = "gen3ou", team: str = ""
     ) -> str:
         """Challenge a specific user to a battle.
 

@@ -146,8 +146,50 @@ class TransformerConfig:
         return cls(**base)
 
     @classmethod
+    def p8_gen3(cls, vocabs: Any | None = None, **kwargs: Any) -> TransformerConfig:
+        """P8 profile tuned for Gen 3 OU (4L/256d/4H, ~2.5M params).
+
+        Standard P8 architecture scaled for Gen 3's smaller metagame:
+        smaller embedding tables, higher aux weight (hidden info is more
+        critical without team preview), and Gen 3 item taxonomy.
+        """
+        base = dict(
+            num_layers=4,
+            hidden_dim=256,
+            num_heads=4,
+            ffn_multiplier=4,
+            use_value_head=True,
+            prune_dead_features=True,
+            species_embedding_dim=48,   # Smaller (~100 species vs ~600)
+            move_embedding_dim=24,      # Smaller (~200 moves vs ~600)
+            item_embedding_dim=12,      # Much smaller (~30 items vs ~200)
+            ability_embedding_dim=12,   # Smaller (~80 abilities vs ~300)
+            type_embedding_dim=12,      # Slightly smaller (no Fairy combos)
+            max_seq_len=20,
+            num_item_classes=25,        # Gen 3 item taxonomy
+            auxiliary_loss_weight=0.3,  # Higher: hidden info more critical without team preview
+        )
+        base.update(kwargs)
+        if vocabs is not None:
+            base.update(
+                species_vocab_size=vocabs.species.size,
+                moves_vocab_size=vocabs.moves.size,
+                items_vocab_size=vocabs.items.size,
+                abilities_vocab_size=vocabs.abilities.size,
+                types_vocab_size=vocabs.types.size,
+                status_vocab_size=vocabs.status.size,
+                weather_vocab_size=vocabs.weather.size,
+                terrain_vocab_size=vocabs.terrain.size,
+            )
+        return cls(**base)
+
+    @classmethod
     def p8_lean(cls, vocabs: Any | None = None, **kwargs: Any) -> TransformerConfig:
-        """P8-Lean profile tuned for Gen 3 OU."""
+        """P8-Lean profile tuned for Gen 3 OU (~1.2-1.5M params).
+
+        Compressed architecture for fast iteration on Gen 3's compact metagame:
+        3 layers, smaller hidden dim, reduced embeddings.
+        """
         base = dict(
             num_layers=3,
             hidden_dim=192,  # Smaller (fewer entities in Gen 3)
@@ -162,6 +204,7 @@ class TransformerConfig:
             type_embedding_dim=12,
             max_seq_len=5,
             num_item_classes=25,  # Gen 3 item taxonomy
+            auxiliary_loss_weight=0.3,  # Higher: hidden info more critical without team preview
         )
         base.update(kwargs)
         if vocabs is not None:

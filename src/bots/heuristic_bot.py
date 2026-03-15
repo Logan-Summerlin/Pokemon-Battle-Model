@@ -1,4 +1,4 @@
-"""Heuristic bot: scripted decision-making with damage estimation.
+"""Heuristic bot: scripted decision-making with damage estimation for Gen 3 OU.
 
 Implements the Phase 3 heuristic bot from the implementation plan:
 1. If a move guarantees a KO, use it
@@ -8,7 +8,9 @@ Implements the Phase 3 heuristic bot from the implementation plan:
 
 Uses simplified but non-trivial damage estimation including:
 - Base power, STAB, type effectiveness
-- Physical vs special split (uses correct attacking/defending stats)
+- Gen 3 type-based physical/special split (type determines category, NOT the move)
+- Explosion/Self-Destruct Defense-halving mechanic (effective 2x power)
+- Permanent weather from Sand Stream (SpD boost for Rock-types)
 - Status move avoidance when offensive play is available
 """
 
@@ -31,7 +33,33 @@ from src.environment.state import BattleState, OwnPokemon, OpponentPokemon
 from src.bots.base_bot import Bot
 
 
-# ── Type effectiveness chart ───────────────────────────────────────────
+# ── Gen 3 type-based physical/special split ─────────────────────────────
+# In Gen 3, whether a move is physical or special depends ENTIRELY on its
+# type, not the individual move. This is the defining mechanical difference
+# from Gen 4+.
+
+PHYSICAL_TYPES = frozenset({
+    "Normal", "Fighting", "Poison", "Ground", "Flying",
+    "Bug", "Rock", "Ghost", "Steel",
+})
+
+SPECIAL_TYPES = frozenset({
+    "Fire", "Water", "Grass", "Electric", "Ice",
+    "Psychic", "Dragon", "Dark",
+})
+
+
+def get_gen3_category(move_type: str) -> str:
+    """Return 'Physical' or 'Special' based on the move's type in Gen 3."""
+    if move_type in PHYSICAL_TYPES:
+        return "Physical"
+    elif move_type in SPECIAL_TYPES:
+        return "Special"
+    return "Physical"  # Default fallback
+
+
+# ── Gen 3 type effectiveness chart ───────────────────────────────────────
+# NO Fairy type in Gen 3. Steel resists Dark and Ghost (changed in Gen 6).
 
 _TYPE_CHART: dict[str, dict[str, float]] = {
     "Normal": {"Rock": 0.5, "Ghost": 0, "Steel": 0.5},
@@ -59,11 +87,11 @@ _TYPE_CHART: dict[str, dict[str, float]] = {
     "Fighting": {
         "Normal": 2, "Ice": 2, "Poison": 0.5, "Flying": 0.5,
         "Psychic": 0.5, "Bug": 0.5, "Rock": 2, "Ghost": 0,
-        "Dark": 2, "Steel": 2, "Fairy": 0.5,
+        "Dark": 2, "Steel": 2,
     },
     "Poison": {
         "Grass": 2, "Poison": 0.5, "Ground": 0.5, "Rock": 0.5,
-        "Ghost": 0.5, "Steel": 0, "Fairy": 2,
+        "Ghost": 0.5, "Steel": 0,
     },
     "Ground": {
         "Fire": 2, "Electric": 2, "Grass": 0.5, "Poison": 2,
@@ -80,146 +108,222 @@ _TYPE_CHART: dict[str, dict[str, float]] = {
     "Bug": {
         "Fire": 0.5, "Grass": 2, "Fighting": 0.5, "Poison": 0.5,
         "Flying": 0.5, "Psychic": 2, "Ghost": 0.5, "Dark": 2,
-        "Steel": 0.5, "Fairy": 0.5,
+        "Steel": 0.5,
     },
     "Rock": {
         "Fire": 2, "Ice": 2, "Fighting": 0.5, "Ground": 0.5,
         "Flying": 2, "Bug": 2, "Steel": 0.5,
     },
-    "Ghost": {"Normal": 0, "Psychic": 2, "Ghost": 2, "Dark": 0.5},
-    "Dragon": {"Dragon": 2, "Steel": 0.5, "Fairy": 0},
+    # Gen 3: Ghost is resisted by Steel (changed in Gen 6)
+    "Ghost": {"Normal": 0, "Psychic": 2, "Ghost": 2, "Dark": 0.5, "Steel": 0.5},
+    "Dragon": {"Dragon": 2, "Steel": 0.5},
+    # Gen 3: Dark is resisted by Steel (changed in Gen 6)
     "Dark": {
         "Fighting": 0.5, "Psychic": 2, "Ghost": 2, "Dark": 0.5,
-        "Fairy": 0.5,
+        "Steel": 0.5,
     },
     "Steel": {
         "Fire": 0.5, "Water": 0.5, "Electric": 0.5, "Ice": 2,
-        "Rock": 2, "Steel": 0.5, "Fairy": 2,
+        "Rock": 2, "Steel": 0.5,
     },
-    "Fairy": {
-        "Fire": 0.5, "Poison": 0.5, "Fighting": 2, "Dragon": 2,
-        "Dark": 2, "Steel": 0.5,
-    },
+    # NO Fairy type in Gen 3
 }
 
-# Move name -> (type, category, base_power) for common Gen 9 OU moves
-_MOVE_DATA: dict[str, tuple[str, str, int]] = {
-    "Earthquake": ("Ground", "Physical", 100),
-    "Close Combat": ("Fighting", "Physical", 120),
-    "Flare Blitz": ("Fire", "Physical", 120),
-    "Ice Beam": ("Ice", "Special", 90),
-    "Thunderbolt": ("Electric", "Special", 90),
-    "Surf": ("Water", "Special", 90),
-    "Psychic": ("Psychic", "Special", 90),
-    "Moonblast": ("Fairy", "Special", 95),
-    "Knock Off": ("Dark", "Physical", 65),
-    "U-turn": ("Bug", "Physical", 70),
-    "Volt Switch": ("Electric", "Special", 70),
-    "Scald": ("Water", "Special", 80),
-    "Body Slam": ("Normal", "Physical", 85),
-    "Brave Bird": ("Flying", "Physical", 120),
-    "Head Smash": ("Rock", "Physical", 150),
-    "Stone Edge": ("Rock", "Physical", 100),
-    "Iron Head": ("Steel", "Physical", 80),
-    "Bullet Punch": ("Steel", "Physical", 40),
-    "Mach Punch": ("Fighting", "Physical", 40),
-    "Aqua Jet": ("Water", "Physical", 40),
-    "Ice Shard": ("Ice", "Physical", 40),
-    "Extreme Speed": ("Normal", "Physical", 80),
-    "Sucker Punch": ("Dark", "Physical", 70),
-    "Shadow Ball": ("Ghost", "Special", 80),
-    "Dark Pulse": ("Dark", "Special", 80),
-    "Draco Meteor": ("Dragon", "Special", 130),
-    "Overheat": ("Fire", "Special", 130),
-    "Leaf Storm": ("Grass", "Special", 130),
-    "Hydro Pump": ("Water", "Special", 110),
-    "Fire Blast": ("Fire", "Special", 110),
-    "Thunder": ("Electric", "Special", 110),
-    "Blizzard": ("Ice", "Special", 110),
-    "Focus Blast": ("Fighting", "Special", 120),
-    "Hurricane": ("Flying", "Special", 110),
-    "Outrage": ("Dragon", "Physical", 120),
-    "Play Rough": ("Fairy", "Physical", 90),
-    "Icicle Crash": ("Ice", "Physical", 85),
-    "Wild Charge": ("Electric", "Physical", 90),
-    "Zen Headbutt": ("Psychic", "Physical", 80),
-    "Crunch": ("Dark", "Physical", 80),
-    "Poison Jab": ("Poison", "Physical", 80),
-    "Waterfall": ("Water", "Physical", 80),
-    "Seed Bomb": ("Grass", "Physical", 80),
-    "X-Scissor": ("Bug", "Physical", 80),
-    "Energy Ball": ("Grass", "Special", 90),
-    "Sludge Bomb": ("Poison", "Special", 90),
-    "Aura Sphere": ("Fighting", "Special", 80),
-    "Flash Cannon": ("Steel", "Special", 80),
-    "Flamethrower": ("Fire", "Special", 90),
-    "Ice Punch": ("Ice", "Physical", 75),
-    "Thunder Punch": ("Electric", "Physical", 75),
-    "Fire Punch": ("Fire", "Physical", 75),
-    "Dragon Claw": ("Dragon", "Physical", 80),
-    "Shadow Claw": ("Ghost", "Physical", 70),
-    "Brick Break": ("Fighting", "Physical", 75),
-    "Rock Slide": ("Rock", "Physical", 75),
-    "Iron Tail": ("Steel", "Physical", 100),
-    "Giga Drain": ("Grass", "Special", 75),
-    "Dragon Pulse": ("Dragon", "Special", 85),
-    "Power Gem": ("Rock", "Special", 80),
-    "Air Slash": ("Flying", "Special", 75),
-    "Acrobatics": ("Flying", "Physical", 55),
-    "Liquidation": ("Water", "Physical", 85),
-    "Superpower": ("Fighting", "Physical", 120),
-    "Sacred Sword": ("Fighting", "Physical", 90),
-    "Gunk Shot": ("Poison", "Physical", 120),
-    "Cross Poison": ("Poison", "Physical", 70),
-    "Rapid Spin": ("Normal", "Physical", 50),
-    "Struggle": ("Normal", "Physical", 50),
-    "Hex": ("Ghost", "Special", 65),
-    "Poltergeist": ("Ghost", "Physical", 110),
-    "Astral Barrage": ("Ghost", "Special", 120),
-    "Behemoth Blade": ("Steel", "Physical", 100),
-    "Photon Geyser": ("Psychic", "Special", 100),
-    "Spectral Thief": ("Ghost", "Physical", 90),
-    "Bitter Blade": ("Fire", "Physical", 90),
-    "Make It Rain": ("Steel", "Special", 120),
-    "Population Bomb": ("Normal", "Physical", 20),
-    "Rage Fist": ("Ghost", "Physical", 50),
-    "Kowtow Cleave": ("Dark", "Physical", 85),
-    "Headlong Rush": ("Ground", "Physical", 120),
-    "Collision Course": ("Fighting", "Physical", 100),
-    "Electro Drift": ("Electric", "Special", 100),
-    "Triple Arrows": ("Fighting", "Physical", 90),
-    "Torch Song": ("Fire", "Special", 80),
-    "Ivy Cudgel": ("Grass", "Physical", 100),
-    "Tachyon Cutter": ("Steel", "Special", 50),
-    "Psyblade": ("Psychic", "Physical", 80),
-    "Blood Moon": ("Normal", "Special", 140),
-    "Matcha Gotcha": ("Grass", "Special", 80),
-    "Syrup Bomb": ("Grass", "Special", 60),
+# Move name -> (type, base_power) for common Gen 3 OU moves.
+# Category is determined by the move's TYPE, not the move itself.
+# Explosion and Self-Destruct halve the target's Defense in Gen 3,
+# effectively doubling their power.
+_MOVE_DATA: dict[str, tuple[str, int]] = {
+    # Normal
+    "Body Slam": ("Normal", 85),
+    "Double-Edge": ("Normal", 120),
+    "Return": ("Normal", 102),
+    "Explosion": ("Normal", 250),  # Halves def -> effective 500 power
+    "Self-Destruct": ("Normal", 200),  # Halves def -> effective 400 power
+    "Hyper Beam": ("Normal", 150),
+    "Facade": ("Normal", 70),
+    "Rapid Spin": ("Normal", 20),
+    "Extreme Speed": ("Normal", 80),
+    "Fake Out": ("Normal", 40),
+    "Struggle": ("Normal", 50),
+    "Strength": ("Normal", 80),
+    "Secret Power": ("Normal", 70),
+    "Crush Claw": ("Normal", 75),
+    # Fighting
+    "Cross Chop": ("Fighting", 100),
+    "Brick Break": ("Fighting", 75),
+    "Focus Punch": ("Fighting", 150),
+    "Superpower": ("Fighting", 120),
+    "Sky Uppercut": ("Fighting", 85),
+    "Mach Punch": ("Fighting", 40),
+    "Low Kick": ("Fighting", 1),  # Variable power, use low default
+    "Seismic Toss": ("Fighting", 0),  # Fixed 100 HP damage
+    "Counter": ("Fighting", 0),  # Variable damage
+    "Reversal": ("Fighting", 1),  # Variable power
+    # Fire
+    "Fire Blast": ("Fire", 120),
+    "Flamethrower": ("Fire", 95),
+    "Overheat": ("Fire", 140),
+    "Fire Punch": ("Fire", 75),
+    "Blaze Kick": ("Fire", 85),
+    "Will-O-Wisp": ("Fire", 0),
+    "Eruption": ("Fire", 150),
+    "Heat Wave": ("Fire", 100),
+    # Water
+    "Surf": ("Water", 95),
+    "Hydro Pump": ("Water", 120),
+    "Ice Beam": ("Ice", 95),
+    "Waterfall": ("Water", 80),
+    # Grass
+    "Giga Drain": ("Grass", 60),
+    "Solar Beam": ("Grass", 120),
+    "Leaf Blade": ("Grass", 70),  # Gen 3 base power
+    "Leech Seed": ("Grass", 0),
+    "Sleep Powder": ("Grass", 0),
+    "Stun Spore": ("Grass", 0),
+    # Electric
+    "Thunderbolt": ("Electric", 95),
+    "Thunder": ("Electric", 120),
+    "Thunder Wave": ("Electric", 0),
+    "Spark": ("Electric", 65),
+    "Thunder Punch": ("Electric", 75),
+    "Volt Tackle": ("Electric", 120),
+    # Ice
+    "Blizzard": ("Ice", 120),
+    "Ice Punch": ("Ice", 75),
+    "Ice Beam": ("Ice", 95),
+    # Psychic
+    "Psychic": ("Psychic", 90),
+    "Calm Mind": ("Psychic", 0),
+    "Zen Headbutt": ("Psychic", 0),  # Doesn't exist in Gen 3
+    "Psycho Boost": ("Psychic", 140),
+    "Future Sight": ("Psychic", 80),
+    # Dragon
+    "Dragon Claw": ("Dragon", 80),
+    "Outrage": ("Dragon", 90),  # Gen 3 base power
+    "Dragon Dance": ("Dragon", 0),
+    "Dragonbreath": ("Dragon", 60),
+    # Dark
+    "Crunch": ("Dark", 80),
+    "Pursuit": ("Dark", 40),
+    "Shadow Ball": ("Ghost", 80),
+    "Knock Off": ("Dark", 20),  # Gen 3 base power (no boost for item removal)
+    "Bite": ("Dark", 60),
+    "Thief": ("Dark", 40),
+    # Ghost
+    "Shadow Punch": ("Ghost", 60),
+    # Poison
+    "Sludge Bomb": ("Poison", 90),
+    "Toxic": ("Poison", 0),
+    "Cross Poison": ("Poison", 0),  # Doesn't exist in Gen 3
+    "Poison Jab": ("Poison", 0),  # Doesn't exist in Gen 3
+    # Ground
+    "Earthquake": ("Ground", 100),
+    "Rock Slide": ("Rock", 75),
+    "Sand Tomb": ("Ground", 15),
+    "Mud Shot": ("Ground", 55),
+    "Earth Power": ("Ground", 0),  # Doesn't exist in Gen 3
+    "Dig": ("Ground", 60),
+    # Rock
+    "Rock Blast": ("Rock", 25),  # Multi-hit
+    "Stone Edge": ("Rock", 0),  # Doesn't exist in Gen 3
+    "Ancient Power": ("Rock", 60),
+    "Rock Throw": ("Rock", 50),
+    "Head Smash": ("Rock", 0),  # Doesn't exist in Gen 3
+    # Flying
+    "Aerial Ace": ("Flying", 60),
+    "Drill Peck": ("Flying", 80),
+    "Brave Bird": ("Flying", 0),  # Doesn't exist in Gen 3
+    "Fly": ("Flying", 70),
+    "Hidden Power Flying": ("Flying", 70),
+    "Sky Attack": ("Flying", 140),
+    # Bug
+    "Signal Beam": ("Bug", 75),
+    "Megahorn": ("Bug", 120),
+    "Silver Wind": ("Bug", 60),
+    "X-Scissor": ("Bug", 0),  # Doesn't exist in Gen 3
+    # Steel
+    "Meteor Mash": ("Steel", 100),
+    "Iron Tail": ("Steel", 100),
+    "Steel Wing": ("Steel", 70),
+    "Metal Claw": ("Steel", 50),
+    "Iron Defense": ("Steel", 0),
+    # Hidden Power (common types in Gen 3 OU)
+    "Hidden Power Grass": ("Grass", 70),
+    "Hidden Power Fire": ("Fire", 70),
+    "Hidden Power Ice": ("Ice", 70),
+    "Hidden Power Bug": ("Bug", 70),
+    "Hidden Power Electric": ("Electric", 70),
+    "Hidden Power Ground": ("Ground", 70),
+    "Hidden Power Fighting": ("Fighting", 70),
+    # Support/Status moves (zero damage)
+    "Spikes": ("Ground", 0),
+    "Roar": ("Normal", 0),
+    "Whirlwind": ("Normal", 0),
+    "Protect": ("Normal", 0),
+    "Substitute": ("Normal", 0),
+    "Wish": ("Normal", 0),
+    "Recover": ("Normal", 0),
+    "Soft-Boiled": ("Normal", 0),
+    "Rest": ("Psychic", 0),
+    "Slack Off": ("Normal", 0),
+    "Milk Drink": ("Normal", 0),
+    "Morning Sun": ("Normal", 0),
+    "Moonlight": ("Normal", 0),
+    "Synthesis": ("Normal", 0),
+    "Refresh": ("Normal", 0),
+    "Heal Bell": ("Normal", 0),
+    "Aromatherapy": ("Grass", 0),
+    "Reflect": ("Psychic", 0),
+    "Light Screen": ("Psychic", 0),
+    "Haze": ("Ice", 0),
+    "Taunt": ("Dark", 0),
+    "Encore": ("Normal", 0),
+    "Trick": ("Psychic", 0),
+    "Yawn": ("Normal", 0),
+    "Toxic": ("Poison", 0),
+    "Thunder Wave": ("Electric", 0),
+    "Swords Dance": ("Normal", 0),
+    "Bulk Up": ("Fighting", 0),
+    "Curse": ("???", 0),
+    "Agility": ("Psychic", 0),
+    "Belly Drum": ("Normal", 0),
+    "Baton Pass": ("Normal", 0),
+    "Rain Dance": ("Water", 0),
+    "Sunny Day": ("Fire", 0),
+    "Sandstorm": ("Rock", 0),
+    "Perish Song": ("Normal", 0),
+    "Destiny Bond": ("Ghost", 0),
+    "Mean Look": ("Normal", 0),
+    "Spider Web": ("Bug", 0),
+    "Block": ("Normal", 0),
 }
 
-# Status moves (zero damage, utility-only)
+# Status moves (zero damage, utility-only) — Gen 3 specific
 _STATUS_MOVES: set[str] = {
-    "Stealth Rock", "Spikes", "Toxic Spikes", "Sticky Web", "Defog",
-    "Recover", "Roost", "Wish", "Protect", "Substitute",
-    "Swords Dance", "Dragon Dance", "Nasty Plot", "Calm Mind",
-    "Will-O-Wisp", "Thunder Wave", "Toxic", "Glare", "Stun Spore",
-    "Sleep Powder", "Spore", "Haze", "Whirlwind", "Roar",
-    "Trick", "Switcheroo", "Taunt", "Encore", "Disable",
-    "Leech Seed", "Pain Split", "Destiny Bond", "Perish Song",
-    "Heal Bell", "Aromatherapy", "Court Change", "Parting Shot",
-    "Teleport", "Baton Pass", "Flip Turn", "Shed Tail",
-    "Slack Off", "Soft-Boiled", "Milk Drink", "Morning Sun",
-    "Moonlight", "Synthesis", "Shore Up", "Strength Sap",
-    "Curse", "Bulk Up", "Iron Defense", "Cosmic Power",
-    "Quiver Dance", "Shell Smash", "Shift Gear", "Coil",
-    "Agility", "Autotomize", "Rock Polish", "Tidy Up",
-    "Trick Room", "Tailwind", "Rain Dance", "Sunny Day",
-    "Sandstorm", "Snowscape", "Reflect", "Light Screen",
-    "Aurora Veil", "Rapid Spin",  # Rapid Spin does damage but low
+    "Spikes", "Roar", "Whirlwind", "Protect", "Substitute",
+    "Wish", "Recover", "Soft-Boiled", "Rest", "Slack Off",
+    "Milk Drink", "Morning Sun", "Moonlight", "Synthesis",
+    "Refresh", "Heal Bell", "Aromatherapy",
+    "Reflect", "Light Screen", "Haze",
+    "Taunt", "Encore", "Trick", "Yawn",
+    "Toxic", "Thunder Wave", "Will-O-Wisp", "Stun Spore",
+    "Sleep Powder", "Spore", "Leech Seed",
+    "Swords Dance", "Dragon Dance", "Calm Mind", "Bulk Up",
+    "Iron Defense", "Amnesia", "Cosmic Power", "Meditate",
+    "Curse", "Agility", "Belly Drum",
+    "Baton Pass", "Rain Dance", "Sunny Day", "Sandstorm",
+    "Perish Song", "Destiny Bond",
+    "Mean Look", "Spider Web", "Block",
+    "Rapid Spin",  # Does damage but very low
 }
 
-# Pivot moves that switch out after use
-_PIVOT_MOVES: set[str] = {"U-turn", "Volt Switch", "Flip Turn", "Parting Shot", "Teleport"}
+# Pivot moves in Gen 3: only Baton Pass (U-turn, Volt Switch don't exist)
+_PIVOT_MOVES: set[str] = {"Baton Pass"}
+
+# Explosion/Self-Destruct get effective 2x power in Gen 3
+# (they halve the target's Defense before calculating damage)
+_EXPLOSION_MOVES: set[str] = {"Explosion", "Self-Destruct"}
 
 
 def _get_types(type_string: str) -> list[str]:
@@ -246,11 +350,12 @@ def _estimate_damage(
 ) -> float:
     """Estimate damage as a rough score (not exact HP).
 
-    Uses simplified damage formula considering:
+    Uses simplified Gen 3 damage formula considering:
     - Base power
     - STAB
     - Type effectiveness
-    - Physical/special stat advantage (rough)
+    - Gen 3 type-based physical/special split
+    - Explosion/Self-Destruct Defense-halving mechanic
     """
     if move_name in _STATUS_MOVES:
         return 0.0
@@ -260,7 +365,7 @@ def _estimate_damage(
         # Unknown move: assume moderate damage
         return 60.0
 
-    move_type, category, base_power = move_data
+    move_type, base_power = move_data
 
     if base_power == 0:
         return 0.0
@@ -273,17 +378,21 @@ def _estimate_damage(
     # STAB (Same Type Attack Bonus)
     stab = 1.5 if move_type in attacker_types else 1.0
 
-    # Use actual stats if available for physical/special split
+    # Gen 3: physical/special determined by TYPE, not by individual move
+    category = get_gen3_category(move_type)
     if category == "Physical":
         atk_stat = attacker.stats.get("atk", 100)
     else:
         atk_stat = attacker.stats.get("spa", 100)
 
-    # Rough damage score (not exact HP damage, but proportional)
-    # Normalize by a baseline stat of 100
+    # Explosion/Self-Destruct: halve target Defense in Gen 3
+    # This effectively doubles the damage
+    explosion_bonus = 2.0 if move_name in _EXPLOSION_MOVES else 1.0
+
+    # Rough damage score (proportional, not exact HP)
     stat_factor = atk_stat / 100.0
 
-    return base_power * effectiveness * stab * stat_factor
+    return base_power * effectiveness * stab * stat_factor * explosion_bonus
 
 
 def _defensive_type_score(
@@ -306,6 +415,13 @@ def _defensive_type_score(
 
 class HeuristicBot(Bot):
     """Scripted bot using damage estimation and type-based switching.
+
+    Tuned for Gen 3 OU mechanics:
+    - Type-based physical/special split
+    - No Fairy type
+    - Steel resists Dark and Ghost
+    - Explosion/Self-Destruct halve target Defense
+    - Permanent weather from Sand Stream
 
     Decision priority:
     1. If a move can KO the opponent (estimated damage > remaining HP), use it
@@ -346,7 +462,6 @@ class HeuristicBot(Bot):
 
         opp_types = _get_types(opp.species)  # Fallback; prefer actual types
         # Try to get opponent types from species data if available
-        # In live battles we see types from the switch-in message
         own_types = _get_types(self._get_own_types(active))
         opp_types = self._get_opp_types(opp)
 
@@ -363,12 +478,9 @@ class HeuristicBot(Bot):
                     move_scores.append((idx, score))
 
         # Rule 1: If a move can likely KO, use it
-        # Estimate KO threshold based on opponent HP fraction
-        # If opp is at low HP and we have a strong move, go for it
         if move_scores and opp.hp_fraction > 0:
             best_move_idx, best_score = max(move_scores, key=lambda x: x[1])
             # Rough KO check: if best damage score > some threshold scaled by opp HP
-            # A score of ~150+ at full HP is roughly a KO-range hit
             ko_threshold = 120.0 * opp.hp_fraction
             if best_score > ko_threshold and best_score > 0:
                 return action_from_canonical_index(best_move_idx)
@@ -428,8 +540,6 @@ class HeuristicBot(Bot):
 
         for switch_idx in legal_switches:
             team_pos = switch_idx - SWITCH_2
-            # team_pos 0 = team slot index 1 (since 0 is active), etc.
-            # We need to find the right bench pokemon
             bench_pokemon = self._get_bench_pokemon(state, team_pos)
             if bench_pokemon is None or not bench_pokemon.is_alive:
                 continue
@@ -446,7 +556,7 @@ class HeuristicBot(Bot):
             for move in bench_pokemon.moves:
                 move_data = _MOVE_DATA.get(move.name)
                 if move_data:
-                    move_type, _, bp = move_data
+                    move_type, bp = move_data
                     eff = _type_effectiveness(move_type, opp_types)
                     if eff > 1.0 and bp > 0:
                         offense_score = max(offense_score, eff * bp / 100.0)
@@ -464,7 +574,6 @@ class HeuristicBot(Bot):
         """Get a bench pokemon by its bench position index.
 
         bench_index 0 corresponds to the first non-active pokemon, etc.
-        The mapping depends on which pokemon is currently active.
         """
         bench_count = 0
         for i, poke in enumerate(state.own_team):
@@ -476,15 +585,7 @@ class HeuristicBot(Bot):
         return None
 
     def _get_own_types(self, poke: OwnPokemon) -> str:
-        """Get type string for our pokemon.
-
-        Uses species name as a fallback type hint since we track types
-        in the state data through the request/switch messages.
-        """
-        # In Showdown state, types aren't stored directly on OwnPokemon.
-        # We use the species name to look up types from our known data.
-        # This is a simplification - in the real bot, types would come
-        # from the Pokedex or the state tracker.
+        """Get type string for our pokemon."""
         return _SPECIES_TYPES.get(poke.species, "Normal")
 
     def _get_opp_types(self, opp: OpponentPokemon) -> list[str]:
@@ -493,6 +594,7 @@ class HeuristicBot(Bot):
         return _get_types(type_str)
 
     def choose_team_order(self, observation: Observation) -> str:
+        # Gen 3 has no team preview, but keep interface consistent
         return "123456"
 
     def on_battle_start(self) -> None:
@@ -514,163 +616,147 @@ class HeuristicBot(Bot):
         return self._wins / self._games_played
 
 
-# ── Species type database (common Gen 9 OU Pokemon) ─────────────────
+# ── Species type database (Gen 3 OU Pokemon) ───────────────────────────
+# Comprehensive list of Pokemon seen in Gen 3 OU (ADV OU).
+# NO Fairy type — Fairy was introduced in Gen 6.
 
 _SPECIES_TYPES: dict[str, str] = {
-    # Top OU Pokemon with their types
-    "Great Tusk": "Ground,Fighting",
-    "Iron Valiant": "Fairy,Fighting",
-    "Gholdengo": "Steel,Ghost",
-    "Kingambit": "Dark,Steel",
-    "Dragapult": "Dragon,Ghost",
-    "Heatran": "Fire,Steel",
-    "Landorus-Therian": "Ground,Flying",
-    "Landorus": "Ground,Flying",
-    "Garchomp": "Dragon,Ground",
-    "Clefable": "Fairy",
-    "Toxapex": "Poison,Water",
-    "Ferrothorn": "Grass,Steel",
-    "Corviknight": "Flying,Steel",
-    "Skeledirge": "Fire,Ghost",
-    "Garganacl": "Rock",
-    "Gliscor": "Ground,Flying",
-    "Rotom-Wash": "Electric,Water",
-    "Rotom-Heat": "Electric,Fire",
-    "Zamazenta": "Fighting",
-    "Zamazenta-Crowned": "Fighting,Steel",
-    "Ogerpon": "Grass",
-    "Ogerpon-Wellspring": "Grass,Water",
-    "Ogerpon-Hearthflame": "Grass,Fire",
-    "Ogerpon-Cornerstone": "Grass,Rock",
-    "Raging Bolt": "Electric,Dragon",
-    "Iron Crown": "Steel,Psychic",
-    "Iron Boulder": "Rock,Psychic",
-    "Iron Moth": "Fire,Poison",
-    "Iron Treads": "Ground,Steel",
-    "Iron Hands": "Fighting,Electric",
-    "Iron Bundle": "Ice,Water",
-    "Roaring Moon": "Dragon,Dark",
-    "Flutter Mane": "Ghost,Fairy",
-    "Sandy Shocks": "Electric,Ground",
-    "Scream Tail": "Fairy,Psychic",
-    "Brute Bonnet": "Grass,Dark",
-    "Walking Wake": "Water,Dragon",
-    "Gouging Fire": "Fire,Dragon",
-    "Iron Leaves": "Grass,Psychic",
-    "Ting-Lu": "Dark,Ground",
-    "Chien-Pao": "Dark,Ice",
-    "Chi-Yu": "Dark,Fire",
-    "Wo-Chien": "Dark,Grass",
-    "Dragonite": "Dragon,Flying",
+    # Tier 1: Top OU threats
     "Tyranitar": "Rock,Dark",
-    "Blissey": "Normal",
-    "Chansey": "Normal",
-    "Dondozo": "Water",
-    "Tatsugiri": "Dragon,Water",
-    "Palafin": "Water",
-    "Palafin-Hero": "Water",
-    "Annihilape": "Fighting,Ghost",
-    "Ceruledge": "Fire,Ghost",
-    "Armarouge": "Fire,Psychic",
-    "Baxcalibur": "Dragon,Ice",
-    "Meowscarada": "Grass,Dark",
-    "Quaquaval": "Water,Fighting",
-    "Cinderace": "Fire",
-    "Greninja": "Water,Dark",
-    "Slowking-Galar": "Poison,Psychic",
-    "Slowbro": "Water,Psychic",
-    "Slowking": "Water,Psychic",
-    "Pelipper": "Water,Flying",
-    "Torkoal": "Fire",
-    "Hippowdon": "Ground",
-    "Amoonguss": "Grass,Poison",
-    "Clodsire": "Poison,Ground",
-    "Ditto": "Normal",
-    "Volcarona": "Bug,Fire",
-    "Weavile": "Dark,Ice",
-    "Scizor": "Bug,Steel",
-    "Magnezone": "Electric,Steel",
-    "Gengar": "Ghost,Poison",
-    "Alakazam": "Psychic",
-    "Sneasler": "Fighting,Poison",
-    "Samurott-Hisui": "Water,Dark",
-    "Lilligant-Hisui": "Grass,Fighting",
-    "Zoroark-Hisui": "Normal,Ghost",
-    "Goodra-Hisui": "Steel,Dragon",
-    "Enamorus-Therian": "Fairy,Flying",
-    "Enamorus": "Fairy,Flying",
-    "Tornadus-Therian": "Flying",
-    "Thundurus-Therian": "Electric,Flying",
-    "Thundurus": "Electric,Flying",
-    "Tapu Koko": "Electric,Fairy",
-    "Tapu Lele": "Psychic,Fairy",
-    "Tapu Fini": "Water,Fairy",
-    "Tapu Bulu": "Grass,Fairy",
-    "Urshifu": "Fighting,Dark",
-    "Urshifu-Rapid-Strike": "Fighting,Water",
-    "Kyurem": "Dragon,Ice",
-    "Moltres-Galar": "Dark,Flying",
-    "Articuno-Galar": "Psychic,Flying",
-    "Zapdos-Galar": "Fighting,Flying",
-    "Melmetal": "Steel",
-    "Alomomola": "Water",
-    "Skarmory": "Steel,Flying",
-    "Mandibuzz": "Dark,Flying",
-    "Talonflame": "Fire,Flying",
-    "Hawlucha": "Fighting,Flying",
-    "Ribombee": "Bug,Fairy",
-    "Grimmsnarl": "Dark,Fairy",
-    "Hydreigon": "Dark,Dragon",
-    "Excadrill": "Ground,Steel",
-    "Bisharp": "Dark,Steel",
-    "Azumarill": "Water,Fairy",
-    "Mimikyu": "Ghost,Fairy",
-    "Lycanroc-Dusk": "Rock",
-    "Ninetales-Alola": "Ice,Fairy",
-    "Arcanine": "Fire",
-    "Arcanine-Hisui": "Fire,Rock",
-    "Primarina": "Water,Fairy",
-    "Decidueye-Hisui": "Grass,Fighting",
-    "Typhlosion-Hisui": "Fire,Ghost",
-    "Basculegion": "Water,Ghost",
-    "Overqwil": "Dark,Poison",
-    "Kleavor": "Bug,Rock",
-    "Ursaluna": "Ground,Normal",
-    "Ursaluna-Bloodmoon": "Ground,Normal",
-    "Empoleon": "Water,Steel",
-    "Infernape": "Fire,Fighting",
-    "Lucario": "Fighting,Steel",
-    "Blaziken": "Fire,Fighting",
-    "Swampert": "Water,Ground",
-    "Gyarados": "Water,Flying",
-    "Milotic": "Water",
-    "Weezing-Galar": "Poison,Fairy",
-    "Muk-Alola": "Poison,Dark",
-    "Ninetales": "Fire",
-    "Mamoswine": "Ice,Ground",
-    "Flygon": "Ground,Dragon",
-    "Salamence": "Dragon,Flying",
     "Metagross": "Steel,Psychic",
-    "Latios": "Dragon,Psychic",
-    "Latias": "Dragon,Psychic",
-    "Serperior": "Grass",
-    "Reuniclus": "Psychic",
-    "Conkeldurr": "Fighting",
-    "Krookodile": "Ground,Dark",
-    "Chandelure": "Ghost,Fire",
-    "Haxorus": "Dragon",
-    "Mienshao": "Fighting",
-    "Breloom": "Grass,Fighting",
-    "Rillaboom": "Grass",
-    "Toxtricity": "Electric,Poison",
-    "Dragalge": "Poison,Dragon",
-    "Cloyster": "Water,Ice",
-    "Espeon": "Psychic",
-    "Umbreon": "Dark",
-    "Sylveon": "Fairy",
+    "Salamence": "Dragon,Flying",
+    "Swampert": "Water,Ground",
+    "Skarmory": "Steel,Flying",
+    "Blissey": "Normal",
+    "Gengar": "Ghost,Poison",
+    "Celebi": "Psychic,Grass",
+    "Jirachi": "Steel,Psychic",
+    "Suicune": "Water",
+    "Aerodactyl": "Rock,Flying",
+    "Starmie": "Water,Psychic",
+    "Snorlax": "Normal",
+    "Milotic": "Water",
+    "Zapdos": "Electric,Flying",
+    "Magneton": "Electric,Steel",
+    "Dugtrio": "Ground",
+    "Heracross": "Bug,Fighting",
+    "Flygon": "Ground,Dragon",
+    "Claydol": "Ground,Psychic",
+    "Forretress": "Bug,Steel",
+
+    # Tier 2: Common OU picks
+    "Gyarados": "Water,Flying",
     "Jolteon": "Electric",
     "Vaporeon": "Water",
-    "Flareon": "Fire",
-    "Leafeon": "Grass",
-    "Glaceon": "Ice",
+    "Alakazam": "Psychic",
+    "Machamp": "Fighting",
+    "Charizard": "Fire,Flying",
+    "Venusaur": "Grass,Poison",
+    "Blaziken": "Fire,Fighting",
+    "Breloom": "Grass,Fighting",
+    "Hariyama": "Fighting",
+    "Weezing": "Poison",
+    "Dusclops": "Ghost",
+    "Regice": "Ice",
+    "Registeel": "Steel",
+    "Regirock": "Rock",
+    "Raikou": "Electric",
+    "Entei": "Fire",
+    "Moltres": "Fire,Flying",
+    "Articuno": "Ice,Flying",
+    "Cloyster": "Water,Ice",
+    "Porygon2": "Normal",
+
+    # Tier 3: Viable OU picks
+    "Ludicolo": "Water,Grass",
+    "Kingdra": "Water,Dragon",
+    "Gardevoir": "Psychic",  # No Fairy in Gen 3
+    "Medicham": "Fighting,Psychic",
+    "Houndoom": "Dark,Fire",
+    "Umbreon": "Dark",
+    "Espeon": "Psychic",
+    "Wailord": "Water",
+    "Mantine": "Water,Flying",
+    "Donphan": "Ground",
+    "Marowak": "Ground",
+    "Ninjask": "Bug,Flying",
+    "Shedinja": "Bug,Ghost",
+    "Camerupt": "Fire,Ground",
+    "Armaldo": "Rock,Bug",
+    "Cradily": "Rock,Grass",
+    "Solrock": "Rock,Psychic",
+    "Lunatone": "Rock,Psychic",
+    "Absol": "Dark",
+    "Mawile": "Steel",
+    "Aggron": "Steel,Rock",
+    "Walrein": "Ice,Water",
+    "Glalie": "Ice",
+    "Banette": "Ghost",
+    "Misdreavus": "Ghost",
+    "Crobat": "Poison,Flying",
+    "Nidoking": "Poison,Ground",
+    "Nidoqueen": "Poison,Ground",
+    "Rhydon": "Ground,Rock",
+    "Golem": "Rock,Ground",
+    "Exeggutor": "Grass,Psychic",
+    "Steelix": "Steel,Ground",
+    "Scizor": "Bug,Steel",
+    "Slowbro": "Water,Psychic",
+    "Slowking": "Water,Psychic",
+    "Lanturn": "Water,Electric",
+    "Quagsire": "Water,Ground",
+    "Tentacruel": "Water,Poison",
+    "Lapras": "Water,Ice",
+    "Weezing": "Poison",
+    "Muk": "Poison",
+    "Electrode": "Electric",
+    "Raichu": "Electric",
+    "Ampharos": "Electric",
+    "Manectric": "Electric",
+    "Arcanine": "Fire",
+    "Ninetales": "Fire",
+    "Magmar": "Fire",
+    "Electabuzz": "Electric",
+    "Mr. Mime": "Psychic",
+    "Xatu": "Psychic,Flying",
+    "Grumpig": "Psychic",
+    "Linoone": "Normal",
+    "Tauros": "Normal",
+    "Kangaskhan": "Normal",
+    "Ursaring": "Normal",
+    "Slaking": "Normal",
+    "Smeargle": "Normal",
+    "Zangoose": "Normal",
+    "Blastoise": "Water",
+    "Feraligatr": "Water",
+    "Golduck": "Water",
+    "Politoed": "Water",
+    "Poliwrath": "Water,Fighting",
+    "Crawdaunt": "Water,Dark",
+    "Sharpedo": "Water,Dark",
+    "Whiscash": "Water,Ground",
+    "Relicanth": "Water,Rock",
+    "Corsola": "Water,Rock",
+    "Stantler": "Normal",
+    "Girafarig": "Normal,Psychic",
+    "Dodrio": "Normal,Flying",
+    "Fearow": "Normal,Flying",
+    "Pidgeot": "Normal,Flying",
+    "Swellow": "Normal,Flying",
+    "Altaria": "Dragon,Flying",
+    "Dragonite": "Dragon,Flying",
+    "Tropius": "Grass,Flying",
+    "Jumpluff": "Grass,Flying",
+    "Vileplume": "Grass,Poison",
+    "Bellossom": "Grass",
+    "Roselia": "Grass,Poison",
+    "Cacturne": "Grass,Dark",
+    "Shiftry": "Grass,Dark",
+    "Sableye": "Dark,Ghost",
+    "Sneasel": "Dark,Ice",
+    "Murkrow": "Dark,Flying",
+    "Pinsir": "Bug",
+    "Heracross": "Bug,Fighting",
+    "Volbeat": "Bug",
+    "Illumise": "Bug",
 }
