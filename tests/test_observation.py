@@ -66,20 +66,18 @@ def make_turn(
     opponent_prev_move: str = "",
     battle_won: bool = False,
     battle_lost: bool = False,
-    can_tera: bool = True,
     opponent_teampreview: list[ParsedPokemon] | None = None,
 ) -> ParsedTurnState:
     return ParsedTurnState(
-        format="gen9ou",
+        format="gen3ou",
         player_active=player_active or make_pokemon("Pikachu"),
-        opponent_active=opponent_active or make_pokemon("Charizard", item="Choice Scarf", ability="Blaze"),
+        opponent_active=opponent_active or make_pokemon("Charizard", item="Leftovers", ability="Blaze"),
         available_switches=available_switches or [
             make_pokemon("Blastoise", item="Leftovers", ability="Torrent"),
         ],
         player_prev_move=ParsedMove(name=player_prev_move) if player_prev_move else None,
         opponent_prev_move=ParsedMove(name=opponent_prev_move) if opponent_prev_move else None,
         weather=weather,
-        can_tera=can_tera,
         battle_won=battle_won,
         battle_lost=battle_lost,
         opponent_teampreview=opponent_teampreview or [],
@@ -102,7 +100,7 @@ def make_battle(
 
     return ParsedBattle(
         battle_id="test-battle-001",
-        format="gen9ou",
+        format="gen3ou",
         player_elo=1800,
         result="WIN" if result_won else "LOSS",
         turns=turns,
@@ -163,11 +161,6 @@ class TestObservationConstruction:
         battle.turns[0] = make_turn(weather="RainDance")
         obs = build_observations(battle)
         assert obs[0].field.weather == "RainDance"
-
-    def test_can_tera_flag(self) -> None:
-        battle = make_battle(num_turns=2)
-        obs = build_observations(battle)
-        assert obs[0].can_tera is True
 
     def test_action_taken_recorded(self) -> None:
         battle = make_battle(num_turns=3)

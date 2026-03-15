@@ -11,11 +11,11 @@ Architecture:
     4. Auxiliary head predicts hidden opponent info (item, speed, role, etc.)
     5. Value head estimates win probability (optional)
 
-Input tokens:
+Input tokens (Gen 3 OU):
     - 6 own-team slot tokens (full info)
-    - 6 opponent-team slot tokens (partial/unknown info)
-    - 1 field token (weather, terrain, hazards)
-    - 1 context token (turn number, can_tera, etc.)
+    - 6 opponent-team slot tokens (partial/unknown info, no team preview)
+    - 1 field token (weather, hazards, screens)
+    - 1 context token (turn number, opponent revealed count, etc.)
     Total: 14 tokens per turn step
 """
 
@@ -56,15 +56,15 @@ class TransformerConfig:
     activation: str = "gelu"
     ffn_multiplier: int = 4
 
-    # Vocabulary sizes (set from actual vocabs)
-    species_vocab_size: int = 600
-    moves_vocab_size: int = 600
-    items_vocab_size: int = 200
-    abilities_vocab_size: int = 300
-    types_vocab_size: int = 200
+    # Vocabulary sizes (set from actual vocabs, Gen 3 defaults)
+    species_vocab_size: int = 200
+    moves_vocab_size: int = 400
+    items_vocab_size: int = 80
+    abilities_vocab_size: int = 150
+    types_vocab_size: int = 150
     status_vocab_size: int = 20
     weather_vocab_size: int = 20
-    terrain_vocab_size: int = 20
+    terrain_vocab_size: int = 5
 
     # Embedding dimensions
     species_embedding_dim: int = 64
@@ -77,11 +77,10 @@ class TransformerConfig:
     terrain_embedding_dim: int = 8
 
     # Auxiliary hidden-info head
-    auxiliary_loss_weight: float = 0.2
-    num_item_classes: int = 50
+    auxiliary_loss_weight: float = 0.3  # Higher weight: hidden info more critical without team preview
+    num_item_classes: int = 25  # Gen 3 item taxonomy (~25 classes)
     num_speed_buckets: int = 5
     num_role_archetypes: int = 8
-    num_tera_categories: int = 4
     num_move_families: int = 10
 
     # Value head
@@ -148,20 +147,21 @@ class TransformerConfig:
 
     @classmethod
     def p8_lean(cls, vocabs: Any | None = None, **kwargs: Any) -> TransformerConfig:
-        """P8-Lean profile from PARAMETER_REDUCTION_PROPOSAL."""
+        """P8-Lean profile tuned for Gen 3 OU."""
         base = dict(
             num_layers=3,
-            hidden_dim=224,
+            hidden_dim=192,  # Smaller (fewer entities in Gen 3)
             num_heads=4,
             ffn_multiplier=3,
             use_value_head=False,
             prune_dead_features=True,
             species_embedding_dim=48,
             move_embedding_dim=24,
-            item_embedding_dim=16,
-            ability_embedding_dim=16,
+            item_embedding_dim=12,  # Fewer items in Gen 3
+            ability_embedding_dim=12,  # Fewer abilities in Gen 3
             type_embedding_dim=12,
             max_seq_len=5,
+            num_item_classes=25,  # Gen 3 item taxonomy
         )
         base.update(kwargs)
         if vocabs is not None:
@@ -193,7 +193,7 @@ TOKENS_PER_STEP = NUM_OWN_SLOTS + NUM_OPP_SLOTS + NUM_FIELD_TOKENS + NUM_CONTEXT
 class PokemonEmbedding(nn.Module):
     """Converts raw pokemon feature vector into a dense embedding.
 
-    Takes the 30-dim raw feature vector (9 categorical + 14 continuous + 7 binary)
+    Takes the 28-dim raw feature vector (9 categorical + 14 continuous + 5 binary)
     and produces a hidden_dim embedding via learned categorical embeddings +
     linear projection of continuous/binary features.
     """
@@ -222,11 +222,8 @@ class PokemonEmbedding(nn.Module):
             + c.status_embedding_dim
         )
 
-        # Continuous + binary features projection.
-        # Optional dead-feature pruning drops the always-zero `terastallized` flag.
+        # Continuous + binary features projection
         cont_binary_dim = POKEMON_CONTINUOUS_DIM + POKEMON_BINARY_DIM
-        if c.prune_dead_features:
-            cont_binary_dim -= 1
 
         # Project to hidden_dim
         self.proj = nn.Linear(cat_dim + cont_binary_dim, c.hidden_dim)
@@ -256,11 +253,8 @@ class PokemonEmbedding(nn.Module):
 
         cat_emb = torch.cat([species, move1, move2, move3, move4, item, ability, types, status], dim=-1)
 
-        # Continuous + binary features: [9:30], optionally dropping the final
-        # binary channel (terastallized) when dead-feature pruning is enabled.
+        # Continuous + binary features: [9:28]
         cont_binary = pokemon_features[..., POKEMON_CATEGORICAL_DIM:]
-        if self.config.prune_dead_features:
-            cont_binary = cont_binary[..., :-1]
 
         # Combine and project
         combined = torch.cat([cat_emb, cont_binary], dim=-1)
@@ -316,12 +310,12 @@ class ContextEmbedding(nn.Module):
         c = config
         self.config = config
 
-        # Context: turn_num(0), opp_remaining(1), num_opp_revealed(2),
-        #          can_tera(3), forced_switch(4), is_lead_turn(5),
-        #          prev_player_move(6), prev_opponent_move(7)
+        # Context (Gen 3): turn_num(0), opp_remaining(1), num_opp_revealed(2),
+        #                   forced_switch(3), is_lead_turn(4),
+        #                   prev_player_move(5), prev_opponent_move(6)
         self.prev_move_emb = move_embedding or nn.Embedding(c.moves_vocab_size, c.move_embedding_dim, padding_idx=0)
 
-        cont_dim = 6  # turn_num, opp_remaining, num_opp_revealed, can_tera, forced_switch, is_lead_turn
+        cont_dim = 5  # turn_num, opp_remaining, num_opp_revealed, forced_switch, is_lead_turn
         total_in = cont_dim + 2 * c.move_embedding_dim
 
         self.proj = nn.Linear(total_in, c.hidden_dim)
@@ -335,8 +329,8 @@ class ContextEmbedding(nn.Module):
         Returns:
             (..., hidden_dim) context token embedding
         """
-        cont = context_features[..., :6]
-        move_indices = context_features[..., 6:8].long().clamp(min=0)
+        cont = context_features[..., :5]
+        move_indices = context_features[..., 5:7].long().clamp(min=0)
 
         prev_player = self.prev_move_emb(move_indices[..., 0])
         prev_opp = self.prev_move_emb(move_indices[..., 1])
@@ -599,7 +593,7 @@ class AuxiliaryHead(nn.Module):
     """Predicts hidden opponent information from encoder output.
 
     For each opponent pokemon slot, predicts:
-    - Item class (categorical, top-50)
+    - Item class (categorical, 25 classes for Gen 3)
     - Speed bucket (ordinal, 5 classes)
     - Role archetype (categorical, 8 classes)
     - Threat profile (joint speed-bucket x role-archetype)
@@ -899,7 +893,7 @@ def compute_auxiliary_loss(
 
     Args:
         aux_preds: Dict with keys item_logits, speed_logits, role_logits,
-                  tera_logits, move_family_logits. Each (batch, 6, num_classes).
+                  move_family_logits. Each (batch, 6, num_classes).
         aux_targets: Dict with matching keys, targets as class indices or
                     multi-hot for move families. Use -1 for unknown/masked.
 
@@ -910,7 +904,7 @@ def compute_auxiliary_loss(
     losses: dict[str, float] = {}
     n_tasks = 0
 
-    for key in ["item_logits", "speed_logits", "role_logits", "tera_logits"]:
+    for key in ["item_logits", "speed_logits", "role_logits"]:
         if key not in aux_preds or key.replace("_logits", "_targets") not in aux_targets:
             continue
         target_key = key.replace("_logits", "_targets")

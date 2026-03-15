@@ -4,11 +4,10 @@ Extracts training labels for the auxiliary head from replay data.
 Labels are derived from information that was EVENTUALLY revealed
 during the battle — never from omniscient data.
 
-Label types:
-    - Item class: Categorizes opponent items into ~50 classes
+Label types (Gen 3 OU):
+    - Item class: Categorizes opponent items into ~25 classes
     - Speed bucket: Ordinal speed category (very fast -> very slow)
-    - Role archetype: Sweeper, wall, pivot, etc. (inferred from moves/stats)
-    - Tera category: Offensive, defensive, STAB, coverage
+    - Role archetype: Sweeper, wall, pivot, trapper, etc. (inferred from moves/stats)
     - Move family presence: Priority, recovery, hazards, status, etc.
 
 Key constraint (Hidden Information Doctrine):
@@ -35,100 +34,68 @@ logger = logging.getLogger(__name__)
 # ── Item classification ──────────────────────────────────────────────────
 
 # Map individual items to broader item classes for the auxiliary head.
-# These classes group items by competitive function.
+# These classes group items by competitive function (Gen 3 OU).
 ITEM_CLASS_MAP: dict[str, int] = {}
 ITEM_CLASSES: list[str] = [
-    "heavydutyboots",       # 0
-    "leftovers",            # 1
-    "lifeorb",              # 2
-    "choiceband",           # 3
-    "choicespecs",          # 4
-    "choicescarf",          # 5
-    "assaultvest",          # 6
-    "focussash",            # 7
-    "rockyhelmet",          # 8
-    "blacksludge",          # 9
-    "eviolite",             # 10
-    "loadeddice",           # 11
-    "clearamulet",          # 12
-    "covertcloak",          # 13
-    "safetygoggles",        # 14
-    "shedshell",            # 15
-    "airballoon",           # 16
-    "weaknesspolicy",       # 17
-    "sitrusberry",          # 18
-    "lumberry",             # 19
-    "expertbelt",           # 20
-    "whiteherb",            # 21
-    "redcard",              # 22
-    "ejectbutton",          # 23
-    "ejectpack",            # 24
-    "mentalherb",           # 25
-    "powerherb",            # 26
-    "throatspray",          # 27
-    "mirrorherb",           # 28
-    "boosterenergy",        # 29
-    "flameorb",             # 30
-    "toxicorb",             # 31
-    "stickybarb",           # 32
-    "lightclay",            # 33
-    "heatrock",             # 34
-    "damprock",             # 35
-    "smoothrock",           # 36
-    "icyrock",              # 37
-    "terrainextender",      # 38
-    "muscleband",           # 39
-    "wiseglasses",          # 40
-    "scopelens",            # 41
-    "metronome",            # 42
-    "shellbell",            # 43
-    "custapberry",          # 44
-    "aguavberry",           # 45  (pinch berries)
-    "earthplate",           # 46  (type-boosting plates)
-    "colburberry",          # 47  (resist berries)
-    "other",                # 48
-    "noitem",               # 49
+    "leftovers",            # 0 - by far the most common Gen 3 item
+    "choiceband",           # 1
+    "lumberry",             # 2
+    "liechiberry",          # 3 (pinch berries - Atk boost)
+    "petayaberry",          # 4 (pinch berries - SpA boost)
+    "salacberry",           # 5 (pinch berries - Spe boost)
+    "sitrusberry",          # 6
+    "focusband",            # 7
+    "shellbell",            # 8
+    "whiteherb",            # 9
+    "mentalherb",           # 10
+    "leppaberry",           # 11
+    "chestoberry",          # 12 (status cure - Rest/Sleep)
+    "lumberry_cure",        # 13 (status cure berries grouped)
+    "soothebell",           # 14
+    "typeboost",            # 15 (type-boosting items: Charcoal, Mystic Water, etc.)
+    "scopelens",            # 16
+    "kingsrock",            # 17
+    "brightpowder",         # 18
+    "quickclaw",            # 19
+    "magoberry",            # 20 (pinch berries - HP recovery)
+    "aguavberry",           # 21 (pinch berries - HP recovery)
+    "lightclay",            # 22
+    "other",                # 23
+    "noitem",               # 24
 ]
 
 # Build reverse mapping
 for i, item_name in enumerate(ITEM_CLASSES):
     ITEM_CLASS_MAP[item_name] = i
 
-# Type-boosting plates/incenses map to earthplate class
-_TYPE_PLATES = [
-    "earthplate", "meadowplate", "dracoplate", "fistplate", "flameplate",
-    "icicleplate", "insectplate", "ironplate", "mindplate", "pixieplate",
-    "skyplate", "splashplate", "spookyplate", "stoneplate", "toxicplate",
-    "zapplate", "charcoal", "mysticwater", "magnet", "miracleseed",
+# Type-boosting items map to the typeboost class
+_TYPE_BOOST_ITEMS = [
+    "charcoal", "mysticwater", "magnet", "miracleseed",
     "nevermeltice", "blackbelt", "poisonbarb", "sharpbeak", "silkscarf",
     "silverpowder", "softsand", "spelltag", "twistedspoon", "dragonfang",
-    "blackglasses", "hardstone", "metalcoat", "oddincense", "seaincense",
-    "waveincense", "roseincense", "rockincense",
+    "blackglasses", "hardstone", "metalcoat",
 ]
-for plate in _TYPE_PLATES:
-    if plate not in ITEM_CLASS_MAP:
-        ITEM_CLASS_MAP[plate] = ITEM_CLASS_MAP["earthplate"]
+for item in _TYPE_BOOST_ITEMS:
+    if item not in ITEM_CLASS_MAP:
+        ITEM_CLASS_MAP[item] = ITEM_CLASS_MAP["typeboost"]
 
-# Resist berries map to colburberry class
-_RESIST_BERRIES = [
-    "colburberry", "babiriberry", "chartiberry", "chilanberry",
-    "chopleberry", "cobaberry", "habanberry", "kasibberry", "kebiaberry",
-    "occaberry", "passhoberry", "payapaberry", "rindoberry", "roseliberry",
-    "shucaberry", "tangaberry", "wacanberry", "yacheberry",
+# Pinch berries (HP recovery) map to magoberry/aguavberry class
+_PINCH_HP_BERRIES = [
+    "magoberry", "aguavberry", "figyberry", "iapapaberry", "wikiberry",
 ]
-for berry in _RESIST_BERRIES:
+for berry in _PINCH_HP_BERRIES:
     if berry not in ITEM_CLASS_MAP:
-        ITEM_CLASS_MAP[berry] = ITEM_CLASS_MAP["colburberry"]
+        ITEM_CLASS_MAP[berry] = ITEM_CLASS_MAP["magoberry"]
 
-# Pinch berries
-_PINCH_BERRIES = [
-    "aguavberry", "figyberry", "iapapaberry", "magoberry", "wikiberry",
+# Status cure berries map to lumberry_cure class
+_STATUS_CURE_BERRIES = [
+    "cheriberry", "rawstberry", "aspearberry", "pechaberry", "persimberry",
 ]
-for berry in _PINCH_BERRIES:
+for berry in _STATUS_CURE_BERRIES:
     if berry not in ITEM_CLASS_MAP:
-        ITEM_CLASS_MAP[berry] = ITEM_CLASS_MAP["aguavberry"]
+        ITEM_CLASS_MAP[berry] = ITEM_CLASS_MAP["lumberry_cure"]
 
-NUM_ITEM_CLASSES = len(ITEM_CLASSES)  # 50
+NUM_ITEM_CLASSES = len(ITEM_CLASSES)  # 25
 
 
 def classify_item(item_name: str) -> int:
@@ -141,9 +108,13 @@ def classify_item(item_name: str) -> int:
 
 # ── Speed bucket classification ──────────────────────────────────────────
 
-# Speed buckets based on base speed stat thresholds (Gen 9 OU meta)
-# Very fast (>=115), Fast (95-114), Medium (70-94), Slow (45-69), Very slow (<45)
-SPEED_THRESHOLDS = [115, 95, 70, 45]  # Boundaries between buckets
+# Speed buckets based on base speed stat thresholds (Gen 3 OU meta)
+# Very fast (>=110): Aerodactyl, Starmie, Jolteon, Dugtrio
+# Fast (90-109): Gengar, Salamence, Celebi, Jirachi
+# Medium (65-89): Suicune, Metagross, Heracross
+# Slow (40-64): Swampert, Skarmory, Blissey
+# Very slow (<40): Snorlax, Dusclops
+SPEED_THRESHOLDS = [110, 90, 65, 40]  # Boundaries between buckets
 NUM_SPEED_BUCKETS = 5
 
 SPEED_BUCKET_NAMES = ["very_fast", "fast", "medium", "slow", "very_slow"]
@@ -177,32 +148,30 @@ ROLE_NAMES = [
     "support",             # 7
 ]
 
-# Known pivoting moves
-_PIVOT_MOVES = {"uturn", "voltswitch", "flipturm", "flipturn", "teleport", "partingshot", "batonpass"}
+# Known pivoting moves (Gen 3: only Baton Pass; U-turn/Volt Switch don't exist)
+_PIVOT_MOVES = {"batonpass"}
 
-# Known hazard-setting moves
-_HAZARD_MOVES = {"stealthrock", "spikes", "toxicspikes", "stickyweb", "cometpunch"}
+# Known hazard-setting moves (Gen 3: only Spikes; no Stealth Rock, Toxic Spikes, Sticky Web)
+_HAZARD_MOVES = {"spikes"}
 
-# Recovery moves
+# Recovery moves (Gen 3: no Roost, Shore Up, Strength Sap)
 _RECOVERY_MOVES = {
-    "recover", "roost", "softboiled", "moonlight", "morningsun", "synthesis",
-    "slackoff", "shoreup", "milkdrink", "wish", "rest", "strengthsap",
+    "recover", "softboiled", "moonlight", "morningsun", "synthesis",
+    "slackoff", "milkdrink", "wish", "rest",
 }
 
-# Status/support moves
+# Status/support moves (Gen 3: no Defog, no Aurora Veil)
 _SUPPORT_MOVES = {
     "willowisp", "thunderwave", "toxic", "aromatherapy", "healbell",
-    "defog", "rapidspin", "haze", "whirlwind", "roar", "yawn",
+    "rapidspin", "haze", "whirlwind", "roar", "yawn",
     "encore", "taunt", "trick", "knockoff", "reflect", "lightscreen",
-    "auroraveil",
 }
 
-# Setup moves
+# Setup moves (Gen 3: no Nasty Plot, Shell Smash, Quiver Dance, Tidy Up, Victory Dance, etc.)
 _SETUP_MOVES = {
-    "swordsdance", "nastyplot", "calmmind", "dragondance", "bulkup",
-    "irondefense", "amnesia", "cosmicpower", "shellsmash", "quiverdance",
-    "coil", "curse", "agility", "autotomize", "shiftgear",
-    "tidyup", "victorydance",
+    "swordsdance", "calmmind", "dragondance", "bulkup",
+    "irondefense", "amnesia", "cosmicpower",
+    "curse", "agility", "bellydrum", "meditate",
 }
 
 
@@ -288,77 +257,38 @@ def classify_role(
         return 7  # support
 
 
-# ── Tera category classification ─────────────────────────────────────────
-
-NUM_TERA_CATEGORIES = 4
-TERA_CATEGORY_NAMES = ["offensive", "defensive", "stab", "coverage"]
-
-# Defensive tera types (resist common attacking types)
-_DEFENSIVE_TERA_TYPES = {
-    "steel", "fairy", "water", "poison", "ghost", "flying",
-}
-
-# Common STAB tera types are same as pokemon type - need type info for this
-
-
-def classify_tera(
-    tera_type: str,
-    pokemon_types: str,
-) -> int:
-    """Classify tera type usage category.
-
-    0 = offensive (boosts attacking type)
-    1 = defensive (adds resistances)
-    2 = STAB (matches existing type)
-    3 = coverage (new offensive type)
-    """
-    if not tera_type or tera_type.lower() in ("", "unknown", "none"):
-        return -1  # Unknown
-
-    tera_lower = tera_type.lower()
-    types_lower = pokemon_types.lower() if pokemon_types else ""
-
-    # Check if it matches existing type (STAB tera)
-    if tera_lower in types_lower:
-        return 2  # STAB
-
-    # Check if defensive type
-    if tera_lower in _DEFENSIVE_TERA_TYPES:
-        return 1  # defensive
-
-    # Otherwise it's coverage/offensive
-    return 3  # coverage
-
-
 # ── Move family classification ───────────────────────────────────────────
 
 NUM_MOVE_FAMILIES = 10
 MOVE_FAMILY_NAMES = [
-    "priority",         # 0: Quick Attack, Mach Punch, Sucker Punch, etc.
-    "recovery",         # 1: Recover, Roost, etc.
-    "hazard_setup",     # 2: Stealth Rock, Spikes, etc.
-    "hazard_removal",   # 3: Defog, Rapid Spin
+    "priority",         # 0: Quick Attack, Mach Punch, ExtremeSpeed, Fake Out
+    "recovery",         # 1: Recover, Softboiled, Rest, Wish, etc.
+    "hazard_setup",     # 2: Spikes only in Gen 3
+    "hazard_removal",   # 3: Rapid Spin only in Gen 3
     "status_move",      # 4: Will-O-Wisp, Thunder Wave, Toxic, etc.
-    "setup_boost",      # 5: Swords Dance, Nasty Plot, etc.
-    "pivot_move",       # 6: U-turn, Volt Switch, etc.
-    "screen_move",      # 7: Reflect, Light Screen, etc.
-    "phazing_move",     # 8: Whirlwind, Roar, Dragon Tail
-    "trick_move",       # 9: Trick, Switcheroo, Knock Off
+    "setup_boost",      # 5: Swords Dance, Dragon Dance, Calm Mind, etc.
+    "pivot_move",       # 6: Baton Pass only in Gen 3
+    "screen_move",      # 7: Reflect, Light Screen
+    "phazing_move",     # 8: Whirlwind, Roar, Haze
+    "trick_move",       # 9: Trick, Knock Off, Thief
 ]
 
+# Gen 3 priority moves (no Shadow Sneak, Sucker Punch, Bullet Punch, Aqua Jet, Ice Shard)
 _PRIORITY_MOVES = {
-    "extremespeed", "machpunch", "bulletpunch", "aquajet", "iceshard",
-    "shadowsneak", "suckerpunch", "quickattack", "accelerock", "fakeout",
-    "firstimpression", "grassyglide", "jetpunch",
+    "extremespeed", "machpunch", "quickattack", "fakeout",
 }
 
-_HAZARD_REMOVAL_MOVES = {"defog", "rapidspin", "courtchange", "tidyup", "mortalspin"}
+# Gen 3 hazard removal (no Defog, Court Change, Tidy Up, Mortal Spin)
+_HAZARD_REMOVAL_MOVES = {"rapidspin"}
 
-_SCREEN_MOVES = {"reflect", "lightscreen", "auroraveil"}
+# Gen 3 screens (no Aurora Veil)
+_SCREEN_MOVES = {"reflect", "lightscreen"}
 
-_PHAZING_MOVES = {"whirlwind", "roar", "dragontail", "circlethrow", "haze"}
+# Gen 3 phazing (no Dragon Tail, Circle Throw)
+_PHAZING_MOVES = {"whirlwind", "roar", "haze"}
 
-_TRICK_MOVES = {"trick", "switcheroo", "knockoff", "thief", "covet"}
+# Gen 3 trick/disruption (no Switcheroo)
+_TRICK_MOVES = {"trick", "knockoff", "thief", "covet"}
 
 
 def classify_move_families(moves: list[str]) -> list[int]:
@@ -412,10 +342,9 @@ def extract_opponent_labels(
 
     Returns:
         Dict mapping opponent species -> label dict with:
-            item_class: int (0-49) or -1
+            item_class: int (0-24) or -1
             speed_bucket: int (0-4) or -1
             role: int (0-7) or -1
-            tera_category: int (0-3) or -1
             move_families: list[int] of length 10, or all -1 if unknown
     """
     labels: dict[str, dict[str, Any]] = {}
@@ -467,7 +396,6 @@ def extract_opponent_labels(
             "item_class": -1,
             "speed_bucket": -1,
             "role": -1,
-            "tera_category": -1,
             "move_families": [-1] * NUM_MOVE_FAMILIES,
         }
 
@@ -488,10 +416,6 @@ def extract_opponent_labels(
         if poke.base_atk > 0 or poke.base_spa > 0 or moves:
             label["role"] = classify_role(poke, moves)
 
-        # Tera category: only if we have type info
-        if poke.tera_type and poke.tera_type.lower() not in ("", "unknown", "none"):
-            label["tera_category"] = classify_tera(poke.tera_type, poke.types)
-
         # Move families: from all known moves
         if moves:
             label["move_families"] = classify_move_families(moves)
@@ -511,7 +435,6 @@ def build_auxiliary_targets(
         item_targets: (num_turns, 6) int64 - item class per opponent slot
         speed_targets: (num_turns, 6) int64
         role_targets: (num_turns, 6) int64
-        tera_targets: (num_turns, 6) int64
         move_family_targets: (num_turns, 6, 10) int64
 
     Labels are constant across all turns (we use end-of-battle knowledge
@@ -526,13 +449,13 @@ def build_auxiliary_targets(
     item_targets = np.full((num_turns, max_team_size), -1, dtype=np.int64)
     speed_targets = np.full((num_turns, max_team_size), -1, dtype=np.int64)
     role_targets = np.full((num_turns, max_team_size), -1, dtype=np.int64)
-    tera_targets = np.full((num_turns, max_team_size), -1, dtype=np.int64)
     move_family_targets = np.full(
         (num_turns, max_team_size, NUM_MOVE_FAMILIES), -1, dtype=np.int64
     )
 
     for t, turn in enumerate(battle.turns):
         # Build opponent ordering consistent with observation builder
+        # Gen 3: no team preview, so only use active + revealed species
         opp_species_order: list[str] = []
 
         if turn.opponent_active:
@@ -552,7 +475,6 @@ def build_auxiliary_targets(
                 item_targets[t, slot_idx] = lab["item_class"]
                 speed_targets[t, slot_idx] = lab["speed_bucket"]
                 role_targets[t, slot_idx] = lab["role"]
-                tera_targets[t, slot_idx] = lab["tera_category"]
                 families = lab["move_families"]
                 move_family_targets[t, slot_idx] = np.array(families, dtype=np.int64)
 
@@ -560,7 +482,6 @@ def build_auxiliary_targets(
         "item_targets": item_targets,
         "speed_targets": speed_targets,
         "role_targets": role_targets,
-        "tera_targets": tera_targets,
         "move_family_targets": move_family_targets,
     }
 
@@ -580,6 +501,5 @@ def build_turn_auxiliary_targets(
         "item_targets": full["item_targets"][turn_index],
         "speed_targets": full["speed_targets"][turn_index],
         "role_targets": full["role_targets"][turn_index],
-        "tera_targets": full["tera_targets"][turn_index],
         "move_family_targets": full["move_family_targets"][turn_index],
     }

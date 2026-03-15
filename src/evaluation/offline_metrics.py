@@ -51,7 +51,6 @@ class OfflineMetrics:
     item_accuracy: float = 0.0
     speed_accuracy: float = 0.0
     role_accuracy: float = 0.0
-    tera_accuracy: float = 0.0
     move_family_f1: float = 0.0
 
     # Calibration

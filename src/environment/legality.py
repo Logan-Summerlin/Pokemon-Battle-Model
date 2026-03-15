@@ -1,14 +1,13 @@
 """Legal action mask computation.
 
 Computes which actions are legal at each decision point in a battle,
-handling all Gen 9 OU edge cases:
+handling Gen 3 OU edge cases:
 - Forced switches (after faint)
 - Trapping (Shadow Tag, Arena Trap, Magnet Pull, etc.)
-- Choice lock (Choice Band/Specs/Scarf)
+- Choice lock (Choice Band)
 - Encore (locks into last used move)
 - Disabled moves
 - Struggle (when all moves have 0 PP or are disabled)
-- Tera availability (once per battle)
 - Move restrictions from volatile statuses (Taunt, Torment, etc.)
 """
 
@@ -18,9 +17,7 @@ from typing import Any
 
 from src.environment.action_space import (
     MOVE_1,
-    MOVE_1_TERA,
     MOVE_4,
-    MOVE_4_TERA,
     SWITCH_2,
     SWITCH_6,
     ActionMask,
@@ -152,7 +149,6 @@ def _compute_move_legality(state: BattleState, mask: ActionMask) -> None:
 
     # Check if all moves are unusable → Struggle
     all_disabled = True
-    can_tera = _can_terastallize(state)
 
     for i, move_data in enumerate(moves):
         if i > 3:
@@ -165,10 +161,6 @@ def _compute_move_legality(state: BattleState, mask: ActionMask) -> None:
         if not disabled and pp > 0:
             mask.set_legal(MOVE_1 + i)
             all_disabled = False
-
-            # Tera version is legal if we can terastallize
-            if can_tera:
-                mask.set_legal(MOVE_1_TERA + i)
 
     # If all moves are disabled/0 PP, the only legal move is Struggle
     # Struggle is represented as move 1 (index 0) in our action space
@@ -243,29 +235,6 @@ def _is_trapped(state: BattleState) -> bool:
     return False
 
 
-def _can_terastallize(state: BattleState) -> bool:
-    """Check if we can terastallize this turn.
-
-    Conditions:
-    - Haven't already terastallized this battle
-    - The server allows it (canTerastallize flag in request)
-
-    We rely on the server's canTerastallize flag as the authority.
-    If absent, default to False (don't assume tera is available).
-    """
-    if not state.can_terastallize:
-        return False
-
-    request = state._current_request
-    active_data = request.get("active", [{}])
-    if active_data:
-        active = active_data[0]
-        # Server explicitly provides canTerastallize
-        return bool(active.get("canTerastallize", False))
-
-    return False
-
-
 def validate_action_against_mask(
     action_index: int, mask: ActionMask
 ) -> tuple[bool, str]:
@@ -284,11 +253,6 @@ def validate_action_against_mask(
     # Provide specific reason
     if MOVE_1 <= action_index <= MOVE_4:
         return False, f"{action_name}: move disabled, 0 PP, or not available"
-    elif MOVE_1_TERA <= action_index <= MOVE_4_TERA:
-        base_move = action_index - MOVE_1_TERA + MOVE_1
-        if not mask.is_legal(base_move):
-            return False, f"{action_name}: base move is not legal"
-        return False, f"{action_name}: cannot terastallize (already used or not available)"
     elif SWITCH_2 <= action_index <= SWITCH_6:
         return False, f"{action_name}: target fainted, is active, or switching is blocked"
     else:

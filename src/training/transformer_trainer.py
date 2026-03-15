@@ -193,7 +193,7 @@ class TransformerTrainer:
 
     Handles:
     - Policy loss (masked cross-entropy)
-    - Auxiliary hidden-info loss (item, speed, role, tera, move families)
+    - Auxiliary hidden-info loss (item, speed, role, move families)
     - Value loss (win probability)
     - Mixed precision training
     - Gradient accumulation
@@ -325,7 +325,7 @@ class TransformerTrainer:
     def _extract_aux_targets(self, batch: dict[str, torch.Tensor]) -> dict[str, torch.Tensor] | None:
         """Extract auxiliary targets from batch if available."""
         aux_keys = ["item_targets", "speed_targets", "role_targets",
-                     "tera_targets", "move_family_targets"]
+                     "move_family_targets"]
         aux_targets = {}
         for key in aux_keys:
             if key in batch:

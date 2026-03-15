@@ -6,8 +6,8 @@ suitable for tensorization. Enforces the Hidden Information Doctrine:
 - Opponent team has only what has been revealed up to this turn
 - Unknown values use explicit "unknown" markers
 
-Supports both Gen 9 (team preview, tera) and Gen 3 (no team preview,
-no tera, no terrain, permanent weather) formats.
+Supports both Gen 9 (team preview) and Gen 3 (no team preview,
+no terrain, permanent weather) formats.
 
 The observation at turn t contains:
 - Own team: species, HP fraction, status, boosts, moves, item, ability
@@ -43,11 +43,9 @@ class PokemonObservation:
     is_fainted: bool = False
     # Moves (up to 4)
     moves: list[str] = dc_field(default_factory=list)
-    # Item / ability / tera
+    # Item / ability
     item: str = UNKNOWN
     ability: str = UNKNOWN
-    tera_type: str = UNKNOWN
-    terastallized: bool = False
     # Stat boosts
     boosts: dict[str, int] = dc_field(default_factory=dict)
     # Base stats (own pokemon only; 0 for opponent = unknown)
@@ -111,8 +109,6 @@ class TurnObservation:
     # Previous actions for context
     prev_player_move: str = ""
     prev_opponent_move: str = ""
-    # Can terastallize (always False for Gen 3)
-    can_tera: bool = False
     # Forced switch
     forced_switch: bool = False
     # Number of opponent Pokemon remaining
@@ -168,8 +164,6 @@ def _pokemon_to_own_observation(
         moves=[m.name for m in poke.moves if m.name],
         item=poke.item or UNKNOWN,
         ability=poke.ability or UNKNOWN,
-        tera_type=poke.tera_type or UNKNOWN,
-        terastallized=False,  # Inferred from state
         boosts={
             "atk": poke.atk_boost,
             "def": poke.def_boost,
@@ -228,8 +222,6 @@ def _pokemon_to_opponent_observation(
         # Item/ability: only if revealed
         item=revealed_item,
         ability=revealed_ability,
-        tera_type=UNKNOWN,  # Only revealed when used
-        terastallized=False,
         boosts={
             "atk": poke.atk_boost,
             "def": poke.def_boost,
@@ -319,8 +311,6 @@ class OpponentTracker:
         self.revealed_items: dict[str, str] = {}
         # species -> revealed ability
         self.revealed_abilities: dict[str, str] = {}
-        # species -> revealed tera type
-        self.revealed_tera: dict[str, str] = {}
         # Ordered list of opponent species revealed (by switch-in), for no-team-preview gens
         self.revealed_species: list[str] = []
         # species -> last known ParsedPokemon state (for building bench observations)
@@ -383,9 +373,6 @@ class OpponentTracker:
     def get_revealed_ability(self, species: str) -> str:
         return self.revealed_abilities.get(species, UNKNOWN)
 
-    def get_revealed_tera(self, species: str) -> str:
-        return self.revealed_tera.get(species, UNKNOWN)
-
     def get_last_known_state(self, species: str) -> ParsedPokemon | None:
         """Get the last known state for a previously revealed opponent Pokemon."""
         return self._last_known_state.get(species)
@@ -399,8 +386,8 @@ class OpponentTracker:
 def _build_legal_mask(turn: ParsedTurnState) -> list[bool]:
     """Build a legal action mask from the turn state.
 
-    Uses our canonical action space:
-      0-3: move 1-4, 4-7: tera move 1-4, 8-12: switch to bench 0-4
+    Uses our canonical action space (Gen 3):
+      0-3: move 1-4, 4-8: switch to bench 0-4
     """
     from src.environment.action_space import NUM_ACTIONS
 
@@ -413,7 +400,7 @@ def _build_legal_mask(turn: ParsedTurnState) -> list[bool]:
             # Filter out fainted pokemon
             poke = turn.available_switches[i]
             if poke.hp_pct > 0:
-                mask[8 + i] = True  # SWITCH_2 + i
+                mask[4 + i] = True  # SWITCH_2 + i
     else:
         # Moves are legal if the active pokemon has them
         if turn.player_active:
@@ -421,16 +408,13 @@ def _build_legal_mask(turn: ParsedTurnState) -> list[bool]:
             for i in range(min(num_moves, 4)):
                 if turn.player_active.moves[i].name:
                     mask[i] = True  # MOVE_1 + i
-                    # Tera versions are legal if can_tera
-                    if turn.can_tera:
-                        mask[4 + i] = True  # MOVE_1_TERA + i
 
         # Switch actions
         num_switches = len(turn.available_switches)
         for i in range(min(num_switches, 5)):
             poke = turn.available_switches[i]
             if poke.hp_pct > 0:
-                mask[8 + i] = True  # SWITCH_2 + i
+                mask[4 + i] = True  # SWITCH_2 + i
 
     # Ensure at least one action is legal (fallback)
     if not any(mask):
@@ -578,9 +562,6 @@ def build_observations(battle: ParsedBattle) -> list[TurnObservation]:
         # Build legal action mask based on available actions
         legal_mask = _build_legal_mask(turn)
 
-        # Tera is always disabled for Gen 1-4
-        can_tera = turn.can_tera if generation >= 9 else False
-
         obs = TurnObservation(
             turn_number=t,
             own_team=own_team_obs[:MAX_TEAM_SIZE],
@@ -588,7 +569,6 @@ def build_observations(battle: ParsedBattle) -> list[TurnObservation]:
             field=field_obs,
             action_taken=action_taken,
             legal_action_mask=legal_mask,
-            can_tera=can_tera,
             forced_switch=turn.forced_switch,
             opponents_remaining=turn.opponents_remaining,
             num_opponent_revealed=tracker.num_revealed,
