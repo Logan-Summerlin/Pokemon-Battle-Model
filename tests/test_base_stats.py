@@ -37,20 +37,15 @@ class TestNormalization:
         assert _normalize_species_name("Deoxys", "Defense Forme") == "deoxysdefense"
         assert _normalize_species_name("Deoxys", "Speed Forme") == "deoxysspeed"
 
-    def test_rotom_forms(self) -> None:
-        assert _normalize_species_name("Rotom", " ") == "rotom"
-        assert _normalize_species_name("Rotom", "Wash Rotom") == "rotomwash"
-        assert _normalize_species_name("Rotom", "Heat Rotom") == "rotomheat"
-
     def test_deoxys_forms(self) -> None:
         assert _normalize_species_name("Deoxys", "Normal Forme") == "deoxys"
         assert _normalize_species_name("Deoxys", "Speed Forme") == "deoxysspeed"
         assert _normalize_species_name("Deoxys", "Defense Forme") == "deoxysdefense"
 
     def test_special_characters(self) -> None:
-        assert _normalize_species_name("Porygon-Z", " ") == "porygonz"
         assert _normalize_species_name("Mr. Mime", " ") == "mrmime"
         assert _normalize_species_name("Farfetch'd", " ") == "farfetchd"
+        assert _normalize_species_name("Ho-Oh", " ") == "hooh"
 
 
 # ── Tests: Crosswalk loading ────────────────────────────────────────────
@@ -59,7 +54,7 @@ class TestNormalization:
 class TestCrosswalkLoading:
     def test_load_from_default_csv(self) -> None:
         cw = BaseStatsCrosswalk.load()
-        assert len(cw) > 1000  # Should have 1000+ species
+        assert len(cw) > 380  # Gen 1-3: ~392 entries + form aliases
 
     def test_lookup_standard_species(self) -> None:
         cw = BaseStatsCrosswalk.load()
