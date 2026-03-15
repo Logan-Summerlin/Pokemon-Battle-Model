@@ -1,6 +1,7 @@
 # Pokemon Battle Model: Implementation Plan
 
 _Created: March 9, 2026_
+_Migrated to Gen 3 OU: March 2026_
 
 ---
 
@@ -16,9 +17,9 @@ The plan follows one ruthless decision rule: **maximize expected progress per mo
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Format | Gen 9 OU singles | Modern, data-rich, strategically relevant, difficult without being maximally pathological |
-| Information regime | Closed team sheet with standard team preview | Preserves real competitive ambiguity while reducing roster uncertainty |
-| Data window | Gen 9 OU era (2022–2026) from Metamon dataset | Full era coverage; narrow later if drift is a problem |
+| Format | Gen 3 OU singles (ADV) | Deeper hidden-info (no team preview), simpler action space (no Tera), compact metagame, aligned with Metamon research |
+| Information regime | No team preview — opponent team entirely unknown at start | Maximizes hidden-information challenge; makes auxiliary head more valuable |
+| Data window | Gen 3 OU replays from Metamon dataset | Research-aligned; Metamon demonstrated Gens 1-4 are most tractable for IL/offline RL |
 | Task | In-battle move/switch selection only | Team building is a separate project |
 | Model | Structured candidate-action-scoring transformer | Captures sequence context without paying the generic-LLM tax |
 | Training | Behavior cloning first, then narrow synthetic repair | Establishes baseline before adding complexity |
@@ -46,11 +47,11 @@ These five rules govern every engineering decision:
 
 ### Step 0.1: Write a one-page design memo
 Freeze the following in a `SCOPE.md` file committed to the repo:
-- Exact format: Gen 9 OU singles
+- Exact format: Gen 3 OU singles (ADV)
 - Exact ruleset version (Showdown server tag/commit)
-- Information regime: closed team sheet, standard team preview
-- Replay date window (2022–2026, full Gen 9 OU era from Metamon)
-- Minimum Elo threshold for replay inclusion (e.g., 1500+)
+- Information regime: no team preview — opponent team unknown at battle start
+- Replay source: Metamon gen3ou dataset
+- Minimum Elo threshold for replay inclusion (1300+)
 - Explicit list of what is deferred (team building, doubles, search, LLM integration)
 
 ### Step 0.2: Define success metrics
@@ -81,7 +82,7 @@ Create an `EVALUATION_SPEC.md` with:
 
 ### Step 1.1: Stand up a local Pokemon Showdown server
 - Clone and install `pokemon-showdown` at a pinned commit
-- Verify it runs locally with the Gen 9 OU ruleset
+- Verify it runs locally with the Gen 3 OU ruleset
 - Write a smoke test: two random-move bots complete a full battle
 - Document the exact server version and any patches applied
 
@@ -89,17 +90,17 @@ Create an `EVALUATION_SPEC.md` with:
 - Create a `BattleEnv` wrapper that:
   - Connects to the local Showdown server via websocket
   - Parses incoming messages into structured Python objects
-  - Sends actions (move, switch, terastallize) as properly formatted commands
+  - Sends actions (move, switch) as properly formatted commands
   - Tracks game state from the **first-person perspective only** (critical: never expose hidden state)
   - Exposes a `step(action) -> observation, reward, done, info` interface
 - **Key design decision:** The observation must reconstruct only what the acting player knew at decision time. This is the single most important engineering constraint in the project.
 
 ### Step 1.3: Implement legality and action encoding
 - Build a canonical action vocabulary:
-  - 4 moves (each optionally + Tera) + up to 5 switches = variable-size legal action set per turn
+  - 4 moves + up to 5 switches = 9 canonical actions per turn (no Terastallization in Gen 3)
   - Handle forced switches, Struggle, disabled moves, choice-locked moves, trapped states
 - Implement `get_legal_actions(state) -> action_mask`
-- **Unit test every edge case exhaustively:** trapping, choice lock, Encore, disabled moves, fainted forced-switch, Tera availability, etc.
+- **Unit test every edge case exhaustively:** trapping, choice lock, Encore, disabled moves, fainted forced-switch, etc.
 - Compare legality masks against simulator acceptance on 1000+ sampled states
 
 ### Step 1.4: Build the battle harness
@@ -122,9 +123,9 @@ Create an `EVALUATION_SPEC.md` with:
 
 ### Step 2.1: Collect replay data
 - Source: Metamon parsed replay dataset (jakegrigsby/metamon-parsed-replays on Hugging Face)
-- Target: Gen 9 OU replays (gen9ou.tar.gz), date range 2022–2026
+- Target: Gen 3 OU replays (gen3ou.tar.gz)
 - Prototype: 10K random sample for development; scale to full corpus for training
-- Apply Elo filter: keep only games where player Elo is above the threshold (1500+)
+- Apply Elo filter: keep only games where player Elo is above the threshold (1300+)
 - Store raw .json.lz4 files immutably in a `data/raw/` directory
 - Create a metadata table: `battle_id, date, player_elo, opponent, winner, num_turns`
 
@@ -146,12 +147,12 @@ Create an `EVALUATION_SPEC.md` with:
 The observation at turn `t` for player `p` contains:
 
 **Own team (full info):**
-- For each of 6 Pokemon: species, typing, current HP/max HP, status, stat boosts, known moves, item, ability, Tera type, Tera used flag
+- For each of 6 Pokemon: species, typing, current HP/max HP, status, stat boosts, known moves, item, ability
 
 **Opponent team (partial info — first-person only):**
-- Species identities from team preview (all 6 known)
-- For each: HP fraction (visible), revealed moves, revealed item, revealed ability, revealed Tera
-- Explicit `unknown` flags for unrevealed slots
+- No team preview in Gen 3 — opponent species revealed only on switch-in
+- For each revealed Pokemon: HP fraction (visible), revealed moves, revealed item, revealed ability
+- Explicit `unknown` flags for unrevealed slots and unrevealed Pokemon
 - Soft prior features from usage statistics (optional but recommended):
   - Most common item distribution for this species
   - Most common ability distribution
@@ -159,10 +160,9 @@ The observation at turn `t` for player `p` contains:
   - Speed tier bucket probability
 
 **Battlefield state:**
-- Weather, terrain, trick room, gravity
-- Entry hazards per side
-- Screens per side
-- Tailwind per side
+- Weather (including permanent weather from abilities like Sand Stream)
+- Entry hazards per side (Spikes only — no Stealth Rock, Toxic Spikes, or Sticky Web in Gen 3)
+- Screens per side (Reflect, Light Screen)
 - Other side conditions
 
 **Turn context:**
@@ -261,11 +261,10 @@ This is the core of the project. Every decision here is load-bearing.
 **Auxiliary hidden-info head:**
 - Branches off the encoder output
 - For each opponent Pokemon, predicts:
-  - Item class (categorical: choice, boots, leftovers, life orb, etc.)
-  - Speed bucket (ordinal: very fast, fast, medium, slow, very slow)
-  - Role archetype (categorical: sweeper, wall, pivot, hazard setter, etc.)
-  - Tera category (categorical: offensive, defensive, STAB, coverage)
-  - Move-family presence (multi-label: has priority, has recovery, has hazards, has status, etc.)
+  - Item class (categorical: choice band, leftovers, etc. — Gen 3 item pool is compact)
+  - Speed bucket (ordinal: very fast, fast, medium, slow, very slow; Gen 3 thresholds: [110, 90, 65, 40])
+  - Role archetype (categorical: sweeper, wall, trapper, setter, etc.)
+  - Move-family presence (multi-label: has priority, has recovery, has Spikes, has status, etc.)
 - Loss: cross-entropy or binary cross-entropy for each sub-head
 - **Label source:** Only labels derivable from the replay without leaking decision-time truth. E.g., if an item is revealed on turn 15, it can be used as a label for predictions made on turns 1-14 of that game. Labels from games where the info was never revealed should be excluded, NOT filled in from external databases.
 - Loss weighting: auxiliary losses weighted at ~0.1-0.3x the policy loss (tune via ablation)
@@ -409,7 +408,7 @@ This is built in parallel with Phase 4 but expanded here. The evaluation harness
 
 ### Fixed benchmark suite components:
 
-1. **Archetype-stratified test set:** Games involving stall, hyper offense, balance, rain, sun, sand, trick room, etc. Performance must be reasonable across ALL archetypes, not just common ones.
+1. **Archetype-stratified test set:** Games involving TSS (Toxic/Spikes/Sandstorm), bulky offense, hyper offense, stall, rain, sun, Baton Pass chains, etc. Performance must be reasonable across ALL archetypes, not just common ones.
 
 2. **Uncommon-set stress tests:** Inject opponents using legal but off-meta sets. The model must not collapse when expectations are violated.
 
@@ -517,60 +516,62 @@ These are explicitly deferred until Phases 0-7 produce a strong, evaluated syste
 
 ```
 pokemon-battle-model/
-├── SCOPE.md                    # Frozen scope decisions
-├── EVALUATION_SPEC.md          # Success metrics
+├── docs/                       # Active project documentation
+│   ├── SCOPE.md                # Frozen scope decisions
+│   ├── EVALUATION_SPEC.md      # Success metrics (Gen 3 calibrated)
+│   ├── IMPLEMENTATION_PLAN.md  # This document
+│   ├── POKEMON_MODEL_PIPELINE_PLAN.md  # 4-stage training pipeline
+│   ├── CHECKPOINT_CONVENTION.md
+│   └── COMPETITIVE_BATTLE_STRATEGY_GUIDE.md
+├── archive/                    # Historical and superseded documents
 ├── configs/                    # Hydra configs
 │   ├── model/
 │   ├── training/
-│   └── evaluation/
+│   ├── evaluation/
+│   └── environment/
 ├── src/
 │   ├── environment/            # Showdown interface, battle env
 │   │   ├── showdown_client.py
 │   │   ├── battle_env.py
-│   │   ├── action_space.py
-│   │   └── legality.py
+│   │   ├── action_space.py     # 9 canonical actions (Gen 3)
+│   │   ├── legality.py
+│   │   ├── state.py
+│   │   └── protocol.py
 │   ├── data/                   # Replay parsing, observation construction
-│   │   ├── replay_parser.py
+│   │   ├── replay_parser.py    # Handles Gen 3 format (no team preview)
 │   │   ├── observation.py
 │   │   ├── tensorizer.py
-│   │   ├── dataset.py
-│   │   └── priors.py           # Usage statistics / metagame priors
+│   │   ├── dataset.py          # WindowedTurnDataset
+│   │   ├── priors.py           # Usage statistics / metagame priors
+│   │   ├── auxiliary_labels.py
+│   │   └── base_stats.py
 │   ├── models/                 # Model definitions
 │   │   ├── baseline_mlp.py
-│   │   ├── battle_transformer.py
-│   │   ├── heads.py            # Policy, value, hidden-info heads
-│   │   └── embeddings.py
+│   │   └── battle_transformer.py  # Structured transformer (Gen 3)
 │   ├── training/               # Training loops
 │   │   ├── bc_trainer.py
-│   │   ├── synthetic_trainer.py
-│   │   └── rl_trainer.py
+│   │   └── transformer_trainer.py
 │   ├── bots/                   # Bot implementations
+│   │   ├── base_bot.py
 │   │   ├── random_bot.py
+│   │   ├── max_damage_bot.py
 │   │   ├── heuristic_bot.py
 │   │   └── model_bot.py
 │   ├── evaluation/             # Evaluation harness
 │   │   ├── battle_evaluator.py
-│   │   ├── offline_metrics.py
-│   │   ├── benchmark_suite.py
-│   │   └── calibration.py
-│   └── synthetic/              # Synthetic scenario factory
-│       ├── scenario_factory.py
-│       ├── perturbations.py
-│       └── labeling.py
+│   │   └── offline_metrics.py
+│   └── synthetic/              # Synthetic scenario factory (stub, Phase 5)
 ├── tests/                      # Unit and integration tests
-│   ├── test_legality.py
-│   ├── test_parser.py
-│   ├── test_observation.py
-│   └── test_tensorizer.py
-├── scripts/                    # One-off scripts
-│   ├── download_replays.py
+├── scripts/                    # Training, evaluation, data scripts
+│   ├── train_phase4.py         # Core trainer
+│   ├── train_p8_1k.py          # P8 wrapper
+│   ├── train_p8_lean.py        # P8-Lean wrapper
+│   ├── train_p4_25k.py         # P4 wrapper
+│   ├── download_replays.py     # Supports gen3ou/gen9ou
 │   ├── process_dataset.py
-│   ├── train.py
-│   └── evaluate.py
+│   └── evaluate_baselines.py
 ├── data/
-│   ├── raw/                    # Immutable raw replay logs
-│   ├── processed/              # Tensorized datasets
-│   └── splits/                 # Train/val/test manifests
+│   └── processed/              # Tensorized datasets, vocabs, metadata
 └── checkpoints/                # Model checkpoints
 ```
 

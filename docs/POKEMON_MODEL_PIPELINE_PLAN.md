@@ -1,8 +1,9 @@
 # Pokemon Model Pipeline Plan
 
 _Created: 2026-03-15_
+_Migrated to Gen 3 OU: March 2026_
 
-A high-level plan for training a competitive Gen 9 OU Pokemon battle agent across four stages: imitation learning, targeted synthetic fine-tuning, self-play reinforcement learning, and edge-case synthetic repair. Each stage builds on the previous, with explicit gates between them.
+A high-level plan for training a competitive Gen 3 OU (ADV) Pokemon battle agent across four stages: imitation learning, targeted synthetic fine-tuning, self-play reinforcement learning, and edge-case synthetic repair. Each stage builds on the previous, with explicit gates between them.
 
 ---
 
@@ -33,9 +34,11 @@ The intuition (from the project transcript): Stage 1 teaches the model what high
   - P8 (4L/256d/4H, 3.6M params)
   - P8-Lean (3L/224d/4H, ~1.95M params)
   - P4 (6L/384d/6H, 11.5M params)
+- **9-action space** (Gen 3: 4 moves + 5 switches, no Terastallization).
 - **~50% top-1 action accuracy** on held-out replays (vs. ~11% random baseline across 9 possible actions).
 - **Training pipeline**: `.npz` tensors → `WindowedTurnDataset` → masked cross-entropy + auxiliary loss (0.2 weight).
-- **Data**: 10K battles (321,601 turns), Gen 9 OU, 1500+ Elo, 80/10/10 battle-level splits.
+- **Data**: 10K battles, Gen 3 OU, 1300+ Elo, 80/10/10 battle-level splits.
+- **No team preview**: opponent team entirely unknown at battle start — auxiliary head predicts hidden opponent info.
 
 ### What BC Does Well
 
@@ -358,8 +361,7 @@ RL might find this eventually given enough games, but it's a local minimum — t
    - **Endgame conversion failure** (winning position misplayed)
    - **Risk miscalculation** (safe play when behind, risky play when ahead)
    - **Opponent modeling failure** (ignored revealed information)
-   - **Tera timing error** (wasted Tera early or missed critical Tera)
-   - **Momentum mismanagement** (gave free switch after KO, didn't pivot)
+      - **Momentum mismanagement** (gave free switch after KO, didn't pivot)
 
 **Scenario construction:**
 - Extract real game states from failure clusters
@@ -411,7 +413,7 @@ RL might find this eventually given enough games, but it's a local minimum — t
 | Metric | Target | Purpose |
 |--------|--------|---------|
 | Legal action rate | 100% | Safety floor |
-| Top-1 action accuracy (held-out replays) | >50% | BC quality preservation |
+| Top-1 action accuracy (held-out replays) | >48% | BC quality preservation |
 | Win rate vs. random bot | >95% | Sanity check |
 | Win rate vs. heuristic bot | >85% (post-RL) | Competence |
 | Win rate vs. BC checkpoint | >60% (post-RL) | Improvement signal |
