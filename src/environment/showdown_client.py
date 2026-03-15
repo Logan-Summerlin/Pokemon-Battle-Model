@@ -69,7 +69,7 @@ class ShowdownClient:
         client = ShowdownClient(config)
         await client.connect()
         await client.login("BotName")
-        room = await client.challenge("opponent", format="gen9ou", team=packed_team)
+        room = await client.challenge("opponent", format="gen3ou", team=packed_team)
         # ... receive messages and send actions ...
         await client.disconnect()
     """
@@ -167,7 +167,7 @@ class ShowdownClient:
         """Start searching for a battle.
 
         Args:
-            format: Battle format (e.g., "gen9ou")
+            format: Battle format (e.g., "gen3ou")
             team: Team in packed/export format
 
         Returns:

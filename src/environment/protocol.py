@@ -70,7 +70,6 @@ class MessageType(Enum):
     ENDABILITY = "-endability"
     TRANSFORM = "-transform"
     MEGA = "-mega"
-    TERASTALLIZE = "-terastallize"
     ACTIVATE = "-activate"
     PREPARE = "-prepare"
     MUSTRECHARGE = "-mustrecharge"
@@ -417,19 +416,6 @@ def parse_ability_message(msg: BattleMessage) -> dict[str, Any]:
         result["target"] = parse_pokemon_ident(msg.args[0])
     if len(msg.args) >= 2:
         result["ability"] = msg.args[1].strip()
-    return result
-
-
-def parse_terastallize_message(msg: BattleMessage) -> dict[str, Any]:
-    """Extract structured data from |-terastallize|.
-
-    Format: |-terastallize|POKEMON|TYPE
-    """
-    result: dict[str, Any] = {"kwargs": msg.kwargs}
-    if len(msg.args) >= 1:
-        result["target"] = parse_pokemon_ident(msg.args[0])
-    if len(msg.args) >= 2:
-        result["tera_type"] = msg.args[1].strip()
     return result
 
 

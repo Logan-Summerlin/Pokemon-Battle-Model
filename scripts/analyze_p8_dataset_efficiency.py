@@ -26,13 +26,11 @@ def main() -> int:
 
     seq_lens: list[int] = []
     legal_counts: list[float] = []
-    action_counts = np.zeros(13, dtype=np.int64)
+    action_counts = np.zeros(9, dtype=np.int64)
 
     total_slots = 0
     unknown_item = 0
     unknown_ability = 0
-    unknown_tera = 0
-    terastallized_flag = 0
     field_binary_nonzero = 0
 
     for fp in files:
@@ -53,8 +51,6 @@ def main() -> int:
             total_slots += int(np.prod(x.shape[:2]))
             unknown_item += int((x[:, :, 26] > 0.5).sum())
             unknown_ability += int((x[:, :, 27] > 0.5).sum())
-            unknown_tera += int((x[:, :, 28] > 0.5).sum())
-            terastallized_flag += int((x[:, :, 29] > 0.5).sum())
 
         field = battle["field"][:seq_len]
         field_binary_nonzero += int((field[:, 2:] != 0).sum())
@@ -92,16 +88,13 @@ def main() -> int:
             "p90": float(np.percentile(legal, 90)),
         },
         "action_mix": {
-            "move_fraction": float(action_counts[:8].sum() / action_total),
-            "switch_fraction": float(action_counts[8:].sum() / action_total),
-            "tera_move_fraction": float(action_counts[4:8].sum() / action_total),
+            "move_fraction": float(action_counts[:4].sum() / action_total),
+            "switch_fraction": float(action_counts[4:].sum() / action_total),
             "raw_counts": action_counts.tolist(),
         },
         "sparsity_signals": {
             "unknown_item_rate": float(unknown_item / total_slots),
             "unknown_ability_rate": float(unknown_ability / total_slots),
-            "unknown_tera_rate": float(unknown_tera / total_slots),
-            "terastallized_flag_rate": float(terastallized_flag / total_slots),
             "field_binary_nonzero_rate": float(field_binary_nonzero / (seq.sum() * 16)),
         },
         "window_attention_cost_proxy": window_stats,

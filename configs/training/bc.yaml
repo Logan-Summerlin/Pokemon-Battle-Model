@@ -38,4 +38,4 @@ seed: 42
 wandb:
   project: pokemon-battle-model
   group: bc
-  tags: ["bc", "gen9ou"]
+  tags: ["bc", "gen3ou"]

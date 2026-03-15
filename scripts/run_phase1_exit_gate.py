@@ -50,9 +50,8 @@ SHOWDOWN_DIR = Path(os.environ.get(
 NUM_GAMES = 100
 LOG_DIR = PROJECT_ROOT / "data" / "phase1_logs"
 
-# Use Gen 9 Random Battle format — avoids team-building/validation issues
-# and provides diverse matchups automatically.
-BATTLE_FORMAT = "gen9randombattle"
+# Use Gen 3 OU format for battle evaluation.
+BATTLE_FORMAT = "gen3ou"
 
 
 def start_showdown_server() -> subprocess.Popen | None:

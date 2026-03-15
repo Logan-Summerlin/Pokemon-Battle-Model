@@ -85,7 +85,6 @@ def make_state_dict(
     battle_won: bool = False,
     battle_lost: bool = False,
     forced_switch: bool = False,
-    can_tera: bool = False,
     opponents_remaining: int = 6,
     player_prev_move: dict | None = None,
     opponent_prev_move: dict | None = None,
@@ -107,7 +106,7 @@ def make_state_dict(
         "weather": weather,
         "battle_field": battle_field,
         "forced_switch": forced_switch,
-        "can_tera": can_tera,
+        "can_tera": False,
         "battle_won": battle_won,
         "battle_lost": battle_lost,
         "opponent_teampreview": opponent_teampreview or [],
@@ -248,7 +247,7 @@ class TestBattleParsing:
         assert battle.turns[0].forced_switch
 
     def test_no_tera_in_gen3(self) -> None:
-        state = make_state_dict(can_tera=False)
+        state = make_state_dict()
         data = {"states": [state, make_state_dict()], "actions": ["move0", "move1"]}
         battle = load_battle_from_json(data)
         assert not battle.turns[0].can_tera

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate synthetic sample battles in Metamon format.
 
-Creates realistic-looking Gen 9 OU battle data for pipeline validation.
+Creates realistic-looking Gen 3 OU battle data for pipeline validation.
 The generated data follows the Metamon UniversalState JSON format so
 the full data pipeline can be tested end-to-end.
 
@@ -24,76 +24,78 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-# ── Metagame data for realistic generation ────────────────────────────────
+# ── Gen 3 OU metagame data for realistic generation ──────────────────────
 
+# (species, types, base_hp, base_atk, base_def, base_spa, base_spd, base_spe)
 OU_POKEMON = [
-    ("Great Tusk", "Ground/Fighting", 115, 131, 131, 53, 63, 87),
-    ("Gholdengo", "Steel/Ghost", 87, 60, 95, 133, 91, 84),
-    ("Kingambit", "Dark/Steel", 100, 135, 120, 60, 85, 50),
-    ("Dragapult", "Dragon/Ghost", 88, 120, 75, 100, 75, 142),
-    ("Iron Valiant", "Fairy/Fighting", 74, 130, 90, 120, 60, 116),
-    ("Heatran", "Fire/Steel", 91, 90, 106, 130, 106, 77),
-    ("Toxapex", "Poison/Water", 50, 63, 152, 53, 142, 35),
-    ("Corviknight", "Flying/Steel", 98, 87, 105, 53, 85, 67),
-    ("Garganacl", "Rock", 100, 100, 130, 45, 90, 35),
-    ("Gliscor", "Ground/Flying", 75, 95, 125, 45, 75, 95),
-    ("Iron Moth", "Fire/Poison", 80, 70, 60, 140, 110, 110),
-    ("Zamazenta", "Fighting", 92, 130, 115, 80, 115, 138),
-    ("Roaring Moon", "Dragon/Dark", 105, 139, 71, 55, 101, 119),
-    ("Clefable", "Fairy", 95, 70, 73, 95, 90, 60),
-    ("Skeledirge", "Fire/Ghost", 104, 75, 100, 110, 75, 66),
-    ("Slowking-Galar", "Poison/Psychic", 95, 65, 80, 110, 110, 30),
-    ("Ting-Lu", "Dark/Ground", 155, 110, 125, 55, 80, 45),
-    ("Dondozo", "Water", 150, 100, 115, 65, 65, 35),
-    ("Annihilape", "Fighting/Ghost", 110, 115, 80, 50, 90, 90),
-    ("Samurott-Hisui", "Water/Dark", 90, 108, 80, 100, 65, 85),
-    ("Ogerpon-Wellspring", "Water/Grass", 80, 120, 84, 60, 96, 110),
-    ("Landorus-Therian", "Ground/Flying", 89, 145, 90, 105, 80, 91),
-    ("Iron Treads", "Ground/Steel", 90, 112, 120, 72, 70, 106),
-    ("Raging Bolt", "Electric/Dragon", 125, 73, 91, 137, 89, 75),
-    ("Kyurem", "Dragon/Ice", 125, 130, 90, 130, 90, 95),
-    ("Alomomola", "Water", 165, 75, 80, 40, 45, 65),
-    ("Tornadus-Therian", "Flying", 79, 100, 80, 110, 90, 121),
-    ("Darkrai", "Dark", 70, 90, 90, 135, 90, 125),
-    ("Volcarona", "Bug/Fire", 85, 60, 65, 135, 105, 100),
-    ("Tapu Lele", "Psychic/Fairy", 70, 85, 75, 130, 115, 95),
+    ("Tyranitar", "Rock/Dark", 100, 134, 110, 95, 100, 61),
+    ("Salamence", "Dragon/Flying", 95, 135, 80, 110, 80, 100),
+    ("Metagross", "Steel/Psychic", 80, 135, 130, 95, 90, 70),
+    ("Swampert", "Water/Ground", 100, 110, 90, 85, 90, 60),
+    ("Skarmory", "Steel/Flying", 65, 80, 140, 40, 70, 70),
+    ("Blissey", "Normal", 255, 10, 10, 75, 105, 55),
+    ("Gengar", "Ghost/Poison", 60, 65, 60, 130, 75, 110),
+    ("Starmie", "Water/Psychic", 60, 75, 85, 100, 85, 115),
+    ("Jirachi", "Steel/Psychic", 100, 100, 100, 100, 100, 100),
+    ("Celebi", "Psychic/Grass", 100, 100, 100, 100, 100, 100),
+    ("Suicune", "Water", 100, 75, 115, 90, 115, 85),
+    ("Aerodactyl", "Rock/Flying", 80, 105, 65, 60, 75, 130),
+    ("Dugtrio", "Ground", 35, 80, 50, 50, 70, 120),
+    ("Milotic", "Water", 95, 60, 79, 100, 125, 81),
+    ("Magneton", "Electric/Steel", 50, 60, 95, 120, 70, 70),
+    ("Snorlax", "Normal", 160, 110, 65, 65, 110, 30),
+    ("Heracross", "Bug/Fighting", 80, 125, 75, 40, 95, 85),
+    ("Flygon", "Ground/Dragon", 80, 100, 80, 80, 80, 100),
+    ("Claydol", "Ground/Psychic", 60, 70, 105, 70, 120, 75),
+    ("Forretress", "Bug/Steel", 75, 90, 140, 60, 60, 40),
+    ("Zapdos", "Electric/Flying", 90, 90, 85, 125, 90, 100),
+    ("Jolteon", "Electric", 65, 65, 60, 110, 95, 130),
+    ("Weezing", "Poison", 65, 90, 120, 85, 70, 60),
+    ("Dusclops", "Ghost", 40, 70, 130, 60, 130, 25),
+    ("Breloom", "Grass/Fighting", 60, 130, 80, 60, 60, 70),
+    ("Hariyama", "Fighting", 144, 120, 60, 40, 60, 50),
+    ("Moltres", "Fire/Flying", 90, 100, 90, 125, 85, 90),
+    ("Vaporeon", "Water", 130, 65, 60, 110, 95, 65),
+    ("Alakazam", "Psychic", 55, 50, 45, 135, 85, 120),
+    ("Gyarados", "Water/Flying", 95, 125, 79, 60, 100, 81),
 ]
 
 COMMON_MOVES = {
-    "Great Tusk": ["Headlong Rush", "Close Combat", "Ice Spinner", "Rapid Spin", "Knock Off", "Stealth Rock"],
-    "Gholdengo": ["Make It Rain", "Shadow Ball", "Thunderbolt", "Nasty Plot", "Recover", "Trick"],
-    "Kingambit": ["Sucker Punch", "Iron Head", "Kowtow Cleave", "Swords Dance", "Low Kick"],
-    "Dragapult": ["Shadow Ball", "Draco Meteor", "U-turn", "Flamethrower", "Hex", "Thunder Wave"],
-    "Heatran": ["Magma Storm", "Flash Cannon", "Earth Power", "Stealth Rock", "Toxic", "Taunt"],
-    "Toxapex": ["Scald", "Recover", "Haze", "Toxic Spikes", "Knock Off", "Baneful Bunker"],
-    "Corviknight": ["Brave Bird", "U-turn", "Roost", "Defog", "Body Press", "Iron Defense"],
-    "Garganacl": ["Salt Cure", "Recover", "Stealth Rock", "Body Press", "Iron Defense", "Earthquake"],
-    "Gliscor": ["Earthquake", "Facade", "Swords Dance", "Roost", "Knock Off", "Toxic"],
-    "Clefable": ["Moonblast", "Soft-Boiled", "Stealth Rock", "Thunder Wave", "Knock Off", "Calm Mind"],
+    "Tyranitar": ["Rock Slide", "Earthquake", "Crunch", "Dragon Dance", "Pursuit", "Focus Punch"],
+    "Salamence": ["Earthquake", "Dragon Claw", "Fire Blast", "Dragon Dance", "Rock Slide", "Hidden Power"],
+    "Metagross": ["Meteor Mash", "Earthquake", "Explosion", "Rock Slide", "Agility", "Pursuit"],
+    "Swampert": ["Earthquake", "Ice Beam", "Surf", "Protect", "Toxic", "Roar"],
+    "Skarmory": ["Spikes", "Whirlwind", "Drill Peck", "Rest", "Toxic", "Protect"],
+    "Blissey": ["Soft-Boiled", "Toxic", "Ice Beam", "Seismic Toss", "Aromatherapy", "Thunder Wave"],
+    "Gengar": ["Thunderbolt", "Ice Punch", "Hypnosis", "Will-O-Wisp", "Substitute", "Focus Punch"],
+    "Starmie": ["Surf", "Thunderbolt", "Ice Beam", "Rapid Spin", "Recover", "Psychic"],
+    "Jirachi": ["Body Slam", "Fire Punch", "Psychic", "Calm Mind", "Wish", "Protect"],
+    "Celebi": ["Psychic", "Giga Drain", "Leech Seed", "Recover", "Calm Mind", "Baton Pass"],
 }
 
 COMMON_ITEMS = [
-    "Leftovers", "Choice Scarf", "Choice Band", "Choice Specs",
-    "Heavy-Duty Boots", "Life Orb", "Assault Vest", "Rocky Helmet",
-    "Eviolite", "Focus Sash", "Booster Energy", "Air Balloon",
-    "Black Sludge", "Covert Cloak", "Loaded Dice", "Sitrus Berry",
+    "Leftovers", "Choice Band", "Lum Berry", "Liechi Berry",
+    "Salac Berry", "Petaya Berry", "Focus Band", "Macho Brace",
+    "Shell Bell", "White Herb", "Mental Herb", "Sitrus Berry",
+    "Chesto Berry", "Scope Lens", "King's Rock", "Brightpowder",
 ]
 
 COMMON_ABILITIES = [
-    "Intimidate", "Regenerator", "Natural Cure", "Pressure",
-    "Levitate", "Flash Fire", "Protosynthesis", "Quark Drive",
-    "Guts", "Sturdy", "Magic Guard", "Good as Gold",
-    "Supreme Overlord", "Unaware", "Prankster", "Beast Boost",
+    "Intimidate", "Sand Stream", "Clear Body", "Torrent",
+    "Keen Eye", "Natural Cure", "Levitate", "Serene Grace",
+    "Pressure", "Water Absorb", "Guts", "Thick Fat",
+    "Inner Focus", "Synchronize", "Sturdy", "Magnet Pull",
 ]
 
-TERA_TYPES = [
+# Gen 3 types (no Fairy)
+GEN3_TYPES = [
     "Normal", "Fire", "Water", "Electric", "Grass", "Ice",
     "Fighting", "Poison", "Ground", "Flying", "Psychic",
-    "Bug", "Rock", "Ghost", "Dragon", "Dark", "Steel", "Fairy",
+    "Bug", "Rock", "Ghost", "Dragon", "Dark", "Steel",
 ]
 
-WEATHER_OPTIONS = ["", "", "", "", "RainDance", "SunnyDay", "Sandstorm", "Snow"]
-TERRAIN_OPTIONS = ["", "", "", "", "Electric Terrain", "Grassy Terrain", "Psychic Terrain", "Misty Terrain"]
+# Gen 3 weather: permanent from abilities, no terrains
+WEATHER_OPTIONS = ["", "", "", "", "RainDance", "SunnyDay", "Sandstorm"]
 
 STATUS_OPTIONS = ["", "", "", "", "", "brn", "par", "tox", "psn", "slp"]
 
@@ -111,7 +113,7 @@ def random_move(name: str = "") -> dict:
 
     return {
         "name": name,
-        "move_type": random.choice(TERA_TYPES),
+        "move_type": random.choice(GEN3_TYPES),
         "category": cat,
         "base_power": bp,
         "accuracy": random.choice([100, 100, 100, 95, 90, 85, 80]),
@@ -161,7 +163,6 @@ def random_pokemon(species: str | None = None) -> dict:
         "base_spd": base_spd,
         "base_spe": base_spe,
         "base_hp": base_hp,
-        "tera_type": random.choice(TERA_TYPES),
         "base_species": name,
     }
 
@@ -177,7 +178,7 @@ def generate_battle(battle_id: int, rng: random.Random) -> tuple[dict, str]:
 
     num_turns = rng.randint(5, 40)
     won = rng.random() > 0.5
-    elo = rng.choice([1500, 1550, 1600, 1650, 1700, 1750, 1800, 1850, 1900])
+    elo = rng.choice([1300, 1350, 1400, 1450, 1500, 1550, 1600, 1650, 1700])
 
     states = []
     actions = []
@@ -205,19 +206,15 @@ def generate_battle(battle_id: int, rng: random.Random) -> tuple[dict, str]:
         for b in bench:
             b["hp_pct"] = max(0.0, round(rng.uniform(0.3, 1.0), 3))
 
-        # Opponent team preview
-        opp_preview = [random_pokemon(sp) for sp in opponent_species]
-
         # Previous moves
         player_prev = random_move() if t > 0 else None
         opponent_prev = random_move() if t > 0 else None
 
         opp_remaining = max(1, len(opponent_species) - (t // 8))
         forced_switch = rng.random() < 0.05
-        can_tera = t < num_turns // 2
 
         state = {
-            "format": "gen9ou",
+            "format": "gen3ou",
             "player_active_pokemon": player_active,
             "opponent_active_pokemon": opponent_active,
             "available_switches": bench[:5],
@@ -227,23 +224,23 @@ def generate_battle(battle_id: int, rng: random.Random) -> tuple[dict, str]:
             "player_conditions": "",
             "opponent_conditions": "",
             "weather": rng.choice(WEATHER_OPTIONS),
-            "battle_field": rng.choice(TERRAIN_OPTIONS),
+            "battle_field": "",
             "forced_switch": forced_switch,
-            "can_tera": can_tera,
+            "can_tera": False,
             "battle_won": won and is_last,
             "battle_lost": (not won) and is_last,
-            "opponent_teampreview": opp_preview,
+            "opponent_teampreview": [],
         }
 
-        # Add some side conditions occasionally
+        # Add Gen 3 side conditions (Spikes only, no Stealth Rock/Toxic Spikes)
         if rng.random() < 0.3:
-            state["player_conditions"] = rng.choice(["Stealth Rock", "Spikes:2", ""])
+            state["player_conditions"] = rng.choice(["Spikes:1", "Spikes:2", "Spikes:3", ""])
         if rng.random() < 0.3:
-            state["opponent_conditions"] = rng.choice(["Stealth Rock", "Toxic Spikes:1", ""])
+            state["opponent_conditions"] = rng.choice(["Spikes:1", "Spikes:2", ""])
 
         states.append(state)
 
-        # Generate action
+        # Generate action (9 actions: move 1-4, switch 1-5)
         if forced_switch:
             action = f"switch {rng.randint(1, min(5, len(bench)))}"
         else:
@@ -256,7 +253,7 @@ def generate_battle(battle_id: int, rng: random.Random) -> tuple[dict, str]:
     # Generate filename in Metamon format
     date = f"{rng.randint(1,28):02d}-{rng.randint(1,12):02d}-{rng.randint(2022,2026)}"
     result = "WIN" if won else "LOSS"
-    filename = f"battle-gen9ou-{battle_id}_{elo}_Player_vs_Opponent_{date}_{result}.json"
+    filename = f"battle-gen3ou-{battle_id}_{elo}_Player_vs_Opponent_{date}_{result}.json"
 
     return battle_data, filename
 
@@ -273,7 +270,7 @@ def main() -> None:
     rng = random.Random(args.seed)
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
-    logger.info(f"Generating {args.num_battles} synthetic battles...")
+    logger.info(f"Generating {args.num_battles} synthetic Gen 3 OU battles...")
     for i in range(args.num_battles):
         battle_data, filename = generate_battle(i, rng)
         filepath = Path(args.output_dir) / filename
