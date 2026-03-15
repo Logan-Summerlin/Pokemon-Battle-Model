@@ -6,11 +6,14 @@ suitable for tensorization. Enforces the Hidden Information Doctrine:
 - Opponent team has only what has been revealed up to this turn
 - Unknown values use explicit "unknown" markers
 
+Supports both Gen 9 (team preview, tera) and Gen 3 (no team preview,
+no tera, no terrain, permanent weather) formats.
+
 The observation at turn t contains:
-- Own team: species, HP fraction, status, boosts, moves, item, ability, tera
+- Own team: species, HP fraction, status, boosts, moves, item, ability
 - Opponent team: species, HP fraction, status, boosts, revealed moves only
 - Field state: weather, terrain, hazards, screens
-- Turn context: turn number, previous actions, speed order
+- Turn context: turn number, previous actions, opponent revealed count
 - Legal action mask
 """
 
@@ -59,10 +62,18 @@ class PokemonObservation:
 
 @dataclass
 class FieldObservation:
-    """Observation of the battlefield."""
+    """Observation of the battlefield.
+
+    Fields that don't exist in certain generations (e.g., terrain in Gen 3)
+    are kept for tensor-dimension compatibility but set to their default
+    (empty/zero) values. The model learns to ignore dead features via
+    prune_dead_features or naturally.
+    """
 
     weather: str = ""
     terrain: str = ""
+    # Whether ability-set weather is permanent (Gen 3: True, Gen 5+: False)
+    weather_permanent: bool = False
     # Own side
     own_stealth_rock: bool = False
     own_spikes: int = 0
@@ -95,21 +106,25 @@ class TurnObservation:
     field: FieldObservation = dc_field(default_factory=FieldObservation)
     # Action taken (label for training)
     action_taken: str = ""
-    # Legal action mask (13 actions)
+    # Legal action mask
     legal_action_mask: list[bool] = dc_field(default_factory=lambda: [True] * NUM_ACTIONS)
     # Previous actions for context
     prev_player_move: str = ""
     prev_opponent_move: str = ""
-    # Can terastallize
+    # Can terastallize (always False for Gen 3)
     can_tera: bool = False
     # Forced switch
     forced_switch: bool = False
     # Number of opponent Pokemon remaining
     opponents_remaining: int = 6
+    # Number of distinct opponent Pokemon revealed so far (for no-team-preview gens)
+    num_opponent_revealed: int = 0
+    # Whether this is the lead turn (turn 0 — significant for Gen 3 lead metagame)
+    is_lead_turn: bool = False
     # Game result (for value head training)
     game_won: bool | None = None
     # Game phase info
-    game_phase: str = "battle"  # "team_preview", "battle", "finished"
+    game_phase: str = "battle"  # "battle", "finished"
 
 
 def _parse_conditions(conditions_str: str) -> dict[str, Any]:
@@ -236,35 +251,54 @@ def _build_field_observation(
     opponent_conditions: str,
     weather: str,
     battle_field: str,
+    generation: int = 9,
 ) -> FieldObservation:
-    """Build field observation from condition strings."""
+    """Build field observation from condition strings.
+
+    For Gen 3 (generation <= 3):
+    - Terrain is always empty (introduced in Gen 6)
+    - Stealth Rock, Toxic Spikes, Sticky Web, Aurora Veil, Tailwind don't exist
+    - Weather from abilities is permanent
+    - Only Spikes (up to 3 layers), Reflect, and Light Screen exist as side conditions
+    """
     own_conds = _parse_conditions(player_conditions)
     opp_conds = _parse_conditions(opponent_conditions)
 
-    # Map terrain from battle_field
+    is_gen3 = generation <= 3
+
+    # Map terrain from battle_field (always empty for Gen 3)
     terrain = ""
-    if battle_field:
+    if battle_field and not is_gen3:
         terrain = battle_field
 
     return FieldObservation(
         weather=weather,
         terrain=terrain,
-        own_stealth_rock=bool(own_conds.get("Stealth Rock", False)),
+        # In Gen 3, ability-set weather (Sand Stream, Drizzle, Drought) is permanent
+        weather_permanent=is_gen3 and bool(weather),
+        # Stealth Rock: Gen 4+ only
+        own_stealth_rock=bool(own_conds.get("Stealth Rock", False)) if not is_gen3 else False,
+        # Spikes: Gen 2+ (available in Gen 3)
         own_spikes=int(own_conds.get("Spikes", 0)) if isinstance(own_conds.get("Spikes"), int) else (1 if own_conds.get("Spikes") else 0),
-        own_toxic_spikes=int(own_conds.get("Toxic Spikes", 0)) if isinstance(own_conds.get("Toxic Spikes"), int) else (1 if own_conds.get("Toxic Spikes") else 0),
-        own_sticky_web=bool(own_conds.get("Sticky Web", False)),
+        # Toxic Spikes: Gen 4+ only
+        own_toxic_spikes=(int(own_conds.get("Toxic Spikes", 0)) if isinstance(own_conds.get("Toxic Spikes"), int) else (1 if own_conds.get("Toxic Spikes") else 0)) if not is_gen3 else 0,
+        # Sticky Web: Gen 6+ only
+        own_sticky_web=bool(own_conds.get("Sticky Web", False)) if not is_gen3 else False,
         own_reflect=bool(own_conds.get("Reflect", False)),
         own_light_screen=bool(own_conds.get("Light Screen", False)),
-        own_aurora_veil=bool(own_conds.get("Aurora Veil", False)),
-        own_tailwind=bool(own_conds.get("Tailwind", False)),
-        opp_stealth_rock=bool(opp_conds.get("Stealth Rock", False)),
+        # Aurora Veil: Gen 7+ only
+        own_aurora_veil=bool(own_conds.get("Aurora Veil", False)) if not is_gen3 else False,
+        # Tailwind: Gen 4+ only
+        own_tailwind=bool(own_conds.get("Tailwind", False)) if not is_gen3 else False,
+        # Opponent side — same rules
+        opp_stealth_rock=bool(opp_conds.get("Stealth Rock", False)) if not is_gen3 else False,
         opp_spikes=int(opp_conds.get("Spikes", 0)) if isinstance(opp_conds.get("Spikes"), int) else (1 if opp_conds.get("Spikes") else 0),
-        opp_toxic_spikes=int(opp_conds.get("Toxic Spikes", 0)) if isinstance(opp_conds.get("Toxic Spikes"), int) else (1 if opp_conds.get("Toxic Spikes") else 0),
-        opp_sticky_web=bool(opp_conds.get("Sticky Web", False)),
+        opp_toxic_spikes=(int(opp_conds.get("Toxic Spikes", 0)) if isinstance(opp_conds.get("Toxic Spikes"), int) else (1 if opp_conds.get("Toxic Spikes") else 0)) if not is_gen3 else 0,
+        opp_sticky_web=bool(opp_conds.get("Sticky Web", False)) if not is_gen3 else False,
         opp_reflect=bool(opp_conds.get("Reflect", False)),
         opp_light_screen=bool(opp_conds.get("Light Screen", False)),
-        opp_aurora_veil=bool(opp_conds.get("Aurora Veil", False)),
-        opp_tailwind=bool(opp_conds.get("Tailwind", False)),
+        opp_aurora_veil=bool(opp_conds.get("Aurora Veil", False)) if not is_gen3 else False,
+        opp_tailwind=bool(opp_conds.get("Tailwind", False)) if not is_gen3 else False,
     )
 
 
@@ -273,6 +307,9 @@ class OpponentTracker:
 
     Enforces the Hidden Information Doctrine by only recording what
     has been explicitly shown during the battle.
+
+    For Gen 3 (no team preview), also tracks which opponent Pokemon
+    have been revealed by switching in, ordered by first appearance.
     """
 
     def __init__(self) -> None:
@@ -284,6 +321,10 @@ class OpponentTracker:
         self.revealed_abilities: dict[str, str] = {}
         # species -> revealed tera type
         self.revealed_tera: dict[str, str] = {}
+        # Ordered list of opponent species revealed (by switch-in), for no-team-preview gens
+        self.revealed_species: list[str] = []
+        # species -> last known ParsedPokemon state (for building bench observations)
+        self._last_known_state: dict[str, ParsedPokemon] = {}
 
     def update_from_turn(self, turn: ParsedTurnState) -> None:
         """Update revealed information from this turn's state.
@@ -292,6 +333,7 @@ class OpponentTracker:
         - Moves are revealed when used (opponent_prev_move)
         - Items may be shown (e.g., Leftovers recovery, choice lock)
         - Abilities may be shown (e.g., Intimidate on switch-in)
+        - Species are revealed when switched in (tracked for no-team-preview)
         """
         opp = turn.opponent_active
         if opp is None:
@@ -300,6 +342,13 @@ class OpponentTracker:
         species = opp.name or opp.base_species
         if not species:
             return
+
+        # Track newly revealed opponent Pokemon (for no-team-preview gens)
+        if species not in self.revealed_species:
+            self.revealed_species.append(species)
+
+        # Save last known state for this species
+        self._last_known_state[species] = opp
 
         # Initialize tracking for this species
         if species not in self.revealed_moves:
@@ -336,6 +385,15 @@ class OpponentTracker:
 
     def get_revealed_tera(self, species: str) -> str:
         return self.revealed_tera.get(species, UNKNOWN)
+
+    def get_last_known_state(self, species: str) -> ParsedPokemon | None:
+        """Get the last known state for a previously revealed opponent Pokemon."""
+        return self._last_known_state.get(species)
+
+    @property
+    def num_revealed(self) -> int:
+        """Number of distinct opponent Pokemon revealed so far."""
+        return len(self.revealed_species)
 
 
 def _build_legal_mask(turn: ParsedTurnState) -> list[bool]:
@@ -388,6 +446,10 @@ def build_observations(battle: ParsedBattle) -> list[TurnObservation]:
     point (before the action is taken). The Hidden Information Doctrine
     is enforced: opponent info only includes what has been revealed.
 
+    Handles both team-preview (Gen 5+) and no-team-preview (Gen 1-4) formats:
+    - Gen 5+: Opponent team slots populated from team preview species
+    - Gen 1-4: Opponent team built incrementally from revealed switch-ins
+
     Args:
         battle: A parsed battle trajectory.
 
@@ -397,12 +459,24 @@ def build_observations(battle: ParsedBattle) -> list[TurnObservation]:
     observations: list[TurnObservation] = []
     tracker = OpponentTracker()
     game_won = battle.won
+    has_team_preview = battle.has_team_preview
+    generation = battle.generation
 
     for t, turn in enumerate(battle.turns):
         # Update opponent tracker BEFORE building observation
         # (reveals from previous turns are visible)
         if t > 0:
             tracker.update_from_turn(battle.turns[t - 1])
+
+        # Also track the current turn's active opponent (for revealed_species)
+        # This ensures the current active opponent is in revealed_species
+        # even on the first turn they appear
+        if turn.opponent_active:
+            cur_opp_species = turn.opponent_active.name or turn.opponent_active.base_species
+            if cur_opp_species and cur_opp_species not in tracker.revealed_species:
+                tracker.revealed_species.append(cur_opp_species)
+            if cur_opp_species:
+                tracker._last_known_state[cur_opp_species] = turn.opponent_active
 
         # Build own team observation
         own_team_obs: list[PokemonObservation] = []
@@ -427,35 +501,54 @@ def build_observations(battle: ParsedBattle) -> list[TurnObservation]:
         # Build opponent team observation (partial info only!)
         opponent_team_obs: list[PokemonObservation] = []
 
+        # Current active opponent (always slot 0 if present)
+        active_opp_species = ""
         if turn.opponent_active:
-            opp_species = turn.opponent_active.name or turn.opponent_active.base_species
+            active_opp_species = turn.opponent_active.name or turn.opponent_active.base_species
             opponent_team_obs.append(
                 _pokemon_to_opponent_observation(
                     turn.opponent_active,
                     is_active=True,
-                    revealed_moves=tracker.get_revealed_moves(opp_species),
-                    revealed_item=tracker.get_revealed_item(opp_species),
-                    revealed_ability=tracker.get_revealed_ability(opp_species),
+                    revealed_moves=tracker.get_revealed_moves(active_opp_species),
+                    revealed_item=tracker.get_revealed_item(active_opp_species),
+                    revealed_ability=tracker.get_revealed_ability(active_opp_species),
                 )
             )
 
-        # Opponent team preview species (visible from team preview)
-        for preview_poke in turn.opponent_teampreview:
-            preview_species = preview_poke.name or preview_poke.base_species
-            # Skip the active pokemon (already added)
-            if opponent_team_obs and opponent_team_obs[0].species == preview_species:
-                continue
-            opponent_team_obs.append(
-                _pokemon_to_opponent_observation(
-                    preview_poke,
-                    is_active=False,
-                    revealed_moves=tracker.get_revealed_moves(preview_species),
-                    revealed_item=tracker.get_revealed_item(preview_species),
-                    revealed_ability=tracker.get_revealed_ability(preview_species),
+        if has_team_preview:
+            # Gen 5+: Fill remaining slots from team preview
+            for preview_poke in turn.opponent_teampreview:
+                preview_species = preview_poke.name or preview_poke.base_species
+                # Skip the active pokemon (already added)
+                if preview_species == active_opp_species:
+                    continue
+                opponent_team_obs.append(
+                    _pokemon_to_opponent_observation(
+                        preview_poke,
+                        is_active=False,
+                        revealed_moves=tracker.get_revealed_moves(preview_species),
+                        revealed_item=tracker.get_revealed_item(preview_species),
+                        revealed_ability=tracker.get_revealed_ability(preview_species),
+                    )
                 )
-            )
+        else:
+            # Gen 1-4 (no team preview): Fill from revealed species only
+            for species in tracker.revealed_species:
+                if species == active_opp_species:
+                    continue  # Already added as active
+                last_state = tracker.get_last_known_state(species)
+                if last_state is not None:
+                    opponent_team_obs.append(
+                        _pokemon_to_opponent_observation(
+                            last_state,
+                            is_active=False,
+                            revealed_moves=tracker.get_revealed_moves(species),
+                            revealed_item=tracker.get_revealed_item(species),
+                            revealed_ability=tracker.get_revealed_ability(species),
+                        )
+                    )
 
-        # Pad to MAX_TEAM_SIZE
+        # Pad to MAX_TEAM_SIZE (unrevealed opponent slots stay empty)
         while len(opponent_team_obs) < MAX_TEAM_SIZE:
             obs = PokemonObservation(is_own=False)
             opponent_team_obs.append(obs)
@@ -466,6 +559,7 @@ def build_observations(battle: ParsedBattle) -> list[TurnObservation]:
             turn.opponent_conditions,
             turn.weather,
             turn.battle_field,
+            generation=generation,
         )
 
         # Get action taken (if available)
@@ -484,6 +578,9 @@ def build_observations(battle: ParsedBattle) -> list[TurnObservation]:
         # Build legal action mask based on available actions
         legal_mask = _build_legal_mask(turn)
 
+        # Tera is always disabled for Gen 1-4
+        can_tera = turn.can_tera if generation >= 9 else False
+
         obs = TurnObservation(
             turn_number=t,
             own_team=own_team_obs[:MAX_TEAM_SIZE],
@@ -491,9 +588,11 @@ def build_observations(battle: ParsedBattle) -> list[TurnObservation]:
             field=field_obs,
             action_taken=action_taken,
             legal_action_mask=legal_mask,
-            can_tera=turn.can_tera,
+            can_tera=can_tera,
             forced_switch=turn.forced_switch,
             opponents_remaining=turn.opponents_remaining,
+            num_opponent_revealed=tracker.num_revealed,
+            is_lead_turn=(t == 0),
             game_won=game_won,
             prev_player_move=prev_player_move,
             prev_opponent_move=prev_opponent_move,

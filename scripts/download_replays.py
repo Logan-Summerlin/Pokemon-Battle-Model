@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Download and sample Gen 9 OU replays from the Metamon dataset.
+"""Download and sample replays from the Metamon dataset.
 
-Downloads gen9ou.tar.gz from jakegrigsby/metamon-parsed-replays on
+Downloads replay archives from jakegrigsby/metamon-parsed-replays on
 Hugging Face, then samples a specified number of battles and saves
 them to data/raw/ as individual .json.lz4 files.
 
+Supports multiple generations via the --generation flag (default: gen3ou).
+
 Usage:
-    python scripts/download_replays.py --sample-size 10000 --elo-threshold 1500
+    python scripts/download_replays.py --sample-size 10000 --elo-threshold 1300
+    python scripts/download_replays.py --generation gen9ou --elo-threshold 1500
     python scripts/download_replays.py --sample-size 10000 --output-dir data/raw
 """
 
@@ -29,18 +32,36 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Default Elo thresholds per generation.
+# Gen 3 has a smaller ladder population, so we use a lower default.
+DEFAULT_ELO_THRESHOLDS: dict[str, int] = {
+    "gen3ou": 1300,
+    "gen9ou": 1500,
+}
 
-def download_gen9ou_tar(cache_dir: str = "/tmp/metamon_cache") -> str:
-    """Download gen9ou.tar.gz from Hugging Face.
 
-    Returns path to the downloaded file.
+def download_replays_tar(
+    generation: str = "gen3ou",
+    cache_dir: str = "/tmp/metamon_cache",
+) -> str:
+    """Download a generation's replay archive from Hugging Face.
+
+    Args:
+        generation: Format string, e.g. "gen3ou", "gen9ou".
+        cache_dir: Local cache directory for HF downloads.
+
+    Returns:
+        Path to the downloaded .tar.gz file.
     """
     from huggingface_hub import hf_hub_download
 
-    logger.info("Downloading gen9ou.tar.gz from jakegrigsby/metamon-parsed-replays...")
+    filename = f"{generation}.tar.gz"
+    logger.info(
+        f"Downloading {filename} from jakegrigsby/metamon-parsed-replays..."
+    )
     path = hf_hub_download(
         repo_id="jakegrigsby/metamon-parsed-replays",
-        filename="gen9ou.tar.gz",
+        filename=filename,
         repo_type="dataset",
         revision="main",
         cache_dir=cache_dir,
@@ -54,7 +75,7 @@ def sample_and_extract(
     tar_path: str,
     output_dir: str,
     sample_size: int = 10000,
-    elo_threshold: int = 1500,
+    elo_threshold: int = 1300,
     seed: int = 42,
 ) -> list[str]:
     """Sample battles from tar and save to output directory.
@@ -145,7 +166,13 @@ def sample_and_extract(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Download and sample Gen 9 OU replays from Metamon dataset"
+        description="Download and sample replays from the Metamon dataset"
+    )
+    parser.add_argument(
+        "--generation",
+        type=str,
+        default="gen3ou",
+        help="Generation format to download, e.g. gen3ou, gen9ou (default: gen3ou)",
     )
     parser.add_argument(
         "--sample-size",
@@ -156,8 +183,8 @@ def main() -> None:
     parser.add_argument(
         "--elo-threshold",
         type=int,
-        default=1500,
-        help="Minimum Elo for both players (default: 1500)",
+        default=None,
+        help="Minimum Elo for both players (default: 1300 for gen3ou, 1500 for gen9ou)",
     )
     parser.add_argument(
         "--output-dir",
@@ -181,27 +208,34 @@ def main() -> None:
         "--tar-path",
         type=str,
         default=None,
-        help="Path to already-downloaded gen9ou.tar.gz (skip download)",
+        help="Path to already-downloaded .tar.gz (skip download)",
     )
     args = parser.parse_args()
+
+    # Resolve Elo threshold: use explicit value or generation-specific default
+    elo_threshold = args.elo_threshold
+    if elo_threshold is None:
+        elo_threshold = DEFAULT_ELO_THRESHOLDS.get(args.generation, 1300)
 
     # Download or use existing tar
     if args.tar_path:
         tar_path = args.tar_path
         logger.info(f"Using existing tar: {tar_path}")
     else:
-        tar_path = download_gen9ou_tar(args.cache_dir)
+        tar_path = download_replays_tar(args.generation, args.cache_dir)
 
     # Sample and extract
     output_files = sample_and_extract(
         tar_path=tar_path,
         output_dir=args.output_dir,
         sample_size=args.sample_size,
-        elo_threshold=args.elo_threshold,
+        elo_threshold=elo_threshold,
         seed=args.seed,
     )
 
-    logger.info(f"Done! {len(output_files)} battles saved to {args.output_dir}")
+    logger.info(
+        f"Done! {len(output_files)} {args.generation} battles saved to {args.output_dir}"
+    )
 
 
 if __name__ == "__main__":

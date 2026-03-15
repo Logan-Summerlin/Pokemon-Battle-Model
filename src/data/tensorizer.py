@@ -176,14 +176,14 @@ POKEMON_FEATURE_DIM = POKEMON_CATEGORICAL_DIM + POKEMON_CONTINUOUS_DIM + POKEMON
 
 # Field features
 # Categorical: weather(1) + terrain(1) = 2
-# Binary: own side (8) + opp side (8) = 16
-FIELD_FEATURE_DIM = 2 + 16
+# Binary: weather_permanent(1) + own side (8) + opp side (8) = 17
+FIELD_FEATURE_DIM = 2 + 17
 
 # Turn context
-# Continuous: turn_number(1) + opponents_remaining(1) = 2
-# Binary: can_tera(1) + forced_switch(1) = 2
+# Continuous: turn_number(1) + opponents_remaining(1) + num_opponent_revealed(1) = 3
+# Binary: can_tera(1) + forced_switch(1) + is_lead_turn(1) = 3
 # Categorical: prev_player_move(1) + prev_opponent_move(1) = 2
-CONTEXT_FEATURE_DIM = 6
+CONTEXT_FEATURE_DIM = 8
 
 
 # ── Tensorization functions ───────────────────────────────────────────────
@@ -306,6 +306,9 @@ def tensorize_field(
         features[idx] = vocabs.terrain.encode(field.terrain)
     idx += 1
 
+    # Weather permanent flag (Gen 3: ability-set weather is permanent)
+    features[idx] = float(field.weather_permanent); idx += 1
+
     # Own side conditions (binary)
     features[idx] = float(field.own_stealth_rock); idx += 1
     features[idx] = field.own_spikes / 3.0; idx += 1
@@ -362,16 +365,18 @@ def tensorize_turn(
     context = np.zeros(CONTEXT_FEATURE_DIM, dtype=np.float32)
     context[0] = obs.turn_number / 100.0  # Normalize turn number
     context[1] = obs.opponents_remaining / 6.0
-    context[2] = float(obs.can_tera)
-    context[3] = float(obs.forced_switch)
+    context[2] = obs.num_opponent_revealed / 6.0  # How many opponent Pokemon revealed
+    context[3] = float(obs.can_tera)
+    context[4] = float(obs.forced_switch)
+    context[5] = float(obs.is_lead_turn)
 
     # Previous moves (categorical)
     if build_vocab:
-        context[4] = vocabs.moves.add(obs.prev_player_move)
-        context[5] = vocabs.moves.add(obs.prev_opponent_move)
+        context[6] = vocabs.moves.add(obs.prev_player_move)
+        context[7] = vocabs.moves.add(obs.prev_opponent_move)
     else:
-        context[4] = vocabs.moves.encode(obs.prev_player_move)
-        context[5] = vocabs.moves.encode(obs.prev_opponent_move)
+        context[6] = vocabs.moves.encode(obs.prev_player_move)
+        context[7] = vocabs.moves.encode(obs.prev_opponent_move)
 
     # Legal mask
     legal_mask = np.array(obs.legal_action_mask[:NUM_ACTIONS], dtype=np.float32)
