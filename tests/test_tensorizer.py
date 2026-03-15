@@ -73,7 +73,6 @@ def make_pokemon_obs(
 def make_turn_obs(
     turn_number: int = 0,
     action: str = "move0",
-    can_tera: bool = True,
     game_won: bool | None = True,
 ) -> TurnObservation:
     own = [make_pokemon_obs(is_active=True)] + [
@@ -88,7 +87,7 @@ def make_turn_obs(
         opponent_team=opp,
         field=FieldObservation(),
         action_taken=action,
-        can_tera=can_tera,
+        can_tera=False,  # Gen 3: no Terastallization
         game_won=game_won,
     )
 

@@ -399,8 +399,8 @@ class OpponentTracker:
 def _build_legal_mask(turn: ParsedTurnState) -> list[bool]:
     """Build a legal action mask from the turn state.
 
-    Uses our canonical action space:
-      0-3: move 1-4, 4-7: tera move 1-4, 8-12: switch to bench 0-4
+    Uses our canonical action space (Gen 3):
+      0-3: move 1-4, 4-8: switch to bench 0-4
     """
     from src.environment.action_space import NUM_ACTIONS
 
@@ -413,7 +413,7 @@ def _build_legal_mask(turn: ParsedTurnState) -> list[bool]:
             # Filter out fainted pokemon
             poke = turn.available_switches[i]
             if poke.hp_pct > 0:
-                mask[8 + i] = True  # SWITCH_2 + i
+                mask[4 + i] = True  # SWITCH_2 + i
     else:
         # Moves are legal if the active pokemon has them
         if turn.player_active:
@@ -421,16 +421,13 @@ def _build_legal_mask(turn: ParsedTurnState) -> list[bool]:
             for i in range(min(num_moves, 4)):
                 if turn.player_active.moves[i].name:
                     mask[i] = True  # MOVE_1 + i
-                    # Tera versions are legal if can_tera
-                    if turn.can_tera:
-                        mask[4 + i] = True  # MOVE_1_TERA + i
 
         # Switch actions
         num_switches = len(turn.available_switches)
         for i in range(min(num_switches, 5)):
             poke = turn.available_switches[i]
             if poke.hp_pct > 0:
-                mask[8 + i] = True  # SWITCH_2 + i
+                mask[4 + i] = True  # SWITCH_2 + i
 
     # Ensure at least one action is legal (fallback)
     if not any(mask):
@@ -578,8 +575,8 @@ def build_observations(battle: ParsedBattle) -> list[TurnObservation]:
         # Build legal action mask based on available actions
         legal_mask = _build_legal_mask(turn)
 
-        # Tera is always disabled for Gen 1-4
-        can_tera = turn.can_tera if generation >= 9 else False
+        # Tera does not exist in Gen 3
+        can_tera = False
 
         obs = TurnObservation(
             turn_number=t,

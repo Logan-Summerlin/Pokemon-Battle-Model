@@ -1,9 +1,9 @@
 """Canonical action vocabulary and encoding for Pokemon battles.
 
-Defines the fixed action space for Gen 9 OU singles:
-- 4 move slots (each optionally + Tera) = 8 move actions
+Defines the fixed action space for Gen 3 OU singles:
+- 4 move slots = 4 move actions
 - Up to 5 switch targets = 5 switch actions
-- Total: 13 canonical action indices (not all legal at every turn)
+- Total: 9 canonical action indices (not all legal at every turn)
 
 The action space is intentionally over-complete — legal action masks
 restrict which actions are available on each turn.
@@ -19,28 +19,23 @@ class ActionType(IntEnum):
     """Types of battle actions."""
 
     MOVE = 0
-    MOVE_TERA = 1  # Move + terastallize
-    SWITCH = 2
+    SWITCH = 1
 
 
 # Canonical action indices
-# Moves: 0-3 (move 1-4), 4-7 (move 1-4 + tera)
-# Switches: 8-12 (switch to team slot 2-6, since slot 1 is active)
+# Moves: 0-3 (move 1-4)
+# Switches: 4-8 (switch to team slot 2-6, since slot 1 is active)
 MOVE_1 = 0
 MOVE_2 = 1
 MOVE_3 = 2
 MOVE_4 = 3
-MOVE_1_TERA = 4
-MOVE_2_TERA = 5
-MOVE_3_TERA = 6
-MOVE_4_TERA = 7
-SWITCH_2 = 8
-SWITCH_3 = 9
-SWITCH_4 = 10
-SWITCH_5 = 11
-SWITCH_6 = 12
+SWITCH_2 = 4
+SWITCH_3 = 5
+SWITCH_4 = 6
+SWITCH_5 = 7
+SWITCH_6 = 8
 
-NUM_ACTIONS = 13  # Total size of action vocabulary
+NUM_ACTIONS = 9  # Total size of action vocabulary
 
 # Action names for logging
 ACTION_NAMES = [
@@ -48,10 +43,6 @@ ACTION_NAMES = [
     "move 2",
     "move 3",
     "move 4",
-    "move 1 tera",
-    "move 2 tera",
-    "move 3 tera",
-    "move 4 tera",
     "switch 2",
     "switch 3",
     "switch 4",
@@ -66,18 +57,15 @@ class BattleAction:
 
     action_type: ActionType
     move_index: int = -1  # 0-3 for moves, -1 for switches
-    switch_index: int = -1  # 1-5 (team position, 0-indexed from non-active) for switches
-    terastallize: bool = False
+    switch_index: int = -1  # 0-4 (team position, 0-indexed from non-active) for switches
 
     @property
     def canonical_index(self) -> int:
         """Get the index in the canonical action vocabulary."""
         if self.action_type == ActionType.SWITCH:
             # switch_index is 0-indexed position in team (excluding active)
-            # maps to indices 8-12
+            # maps to indices 4-8
             return SWITCH_2 + self.switch_index
-        elif self.terastallize or self.action_type == ActionType.MOVE_TERA:
-            return MOVE_1_TERA + self.move_index
         else:
             return MOVE_1 + self.move_index
 
@@ -94,10 +82,7 @@ class BattleAction:
             return f"/choose switch {self.switch_index + 2}"
         else:
             move_num = self.move_index + 1  # 1-indexed
-            cmd = f"/choose move {move_num}"
-            if self.terastallize or self.action_type == ActionType.MOVE_TERA:
-                cmd += " terastallize"
-            return cmd
+            return f"/choose move {move_num}"
 
     def __repr__(self) -> str:
         if self.canonical_index < len(ACTION_NAMES):
@@ -112,12 +97,6 @@ def action_from_canonical_index(index: int) -> BattleAction:
 
     if index <= MOVE_4:
         return BattleAction(action_type=ActionType.MOVE, move_index=index)
-    elif index <= MOVE_4_TERA:
-        return BattleAction(
-            action_type=ActionType.MOVE_TERA,
-            move_index=index - MOVE_1_TERA,
-            terastallize=True,
-        )
     else:
         return BattleAction(
             action_type=ActionType.SWITCH,
@@ -130,7 +109,6 @@ def action_from_showdown_choice(choice: str) -> BattleAction | None:
 
     Examples:
         "move 1" -> BattleAction(MOVE, move_index=0)
-        "move 3 terastallize" -> BattleAction(MOVE_TERA, move_index=2, tera=True)
         "switch 4" -> BattleAction(SWITCH, switch_index=2)
     """
     choice = choice.strip().lower()
@@ -149,14 +127,6 @@ def action_from_showdown_choice(choice: str) -> BattleAction | None:
         move_index = move_num - 1  # Convert to 0-indexed
         if move_index < 0 or move_index > 3:
             return None
-
-        tera = "terastallize" in parts or "tera" in parts
-        if tera:
-            return BattleAction(
-                action_type=ActionType.MOVE_TERA,
-                move_index=move_index,
-                terastallize=True,
-            )
         return BattleAction(action_type=ActionType.MOVE, move_index=move_index)
 
     elif parts[0] == "switch" and len(parts) >= 2:
@@ -185,7 +155,7 @@ class ActionMask:
 
     @classmethod
     def all_moves(cls) -> ActionMask:
-        """Create a mask with all (non-tera) moves legal."""
+        """Create a mask with all moves legal."""
         mask = cls()
         for i in range(MOVE_1, MOVE_4 + 1):
             mask._mask[i] = True

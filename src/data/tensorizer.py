@@ -170,8 +170,8 @@ POKEMON_CATEGORICAL_DIM = 9
 # Continuous: hp_frac(1) + boosts(7) + base_stats(6) = 14
 POKEMON_CONTINUOUS_DIM = 14
 # Binary: is_active(1) + is_fainted(1) + is_own(1) + is_unknown_item(1)
-#         + is_unknown_ability(1) + is_unknown_tera(1) + terastallized(1) = 7
-POKEMON_BINARY_DIM = 7
+#         + is_unknown_ability(1) = 5
+POKEMON_BINARY_DIM = 5
 POKEMON_FEATURE_DIM = POKEMON_CATEGORICAL_DIM + POKEMON_CONTINUOUS_DIM + POKEMON_BINARY_DIM
 
 # Field features
@@ -179,11 +179,11 @@ POKEMON_FEATURE_DIM = POKEMON_CATEGORICAL_DIM + POKEMON_CONTINUOUS_DIM + POKEMON
 # Binary: weather_permanent(1) + own side (8) + opp side (8) = 17
 FIELD_FEATURE_DIM = 2 + 17
 
-# Turn context
+# Turn context (Gen 3)
 # Continuous: turn_number(1) + opponents_remaining(1) + num_opponent_revealed(1) = 3
-# Binary: can_tera(1) + forced_switch(1) + is_lead_turn(1) = 3
+# Binary: forced_switch(1) + is_lead_turn(1) = 2
 # Categorical: prev_player_move(1) + prev_opponent_move(1) = 2
-CONTEXT_FEATURE_DIM = 8
+CONTEXT_FEATURE_DIM = 7
 
 
 # ── Tensorization functions ───────────────────────────────────────────────
@@ -271,10 +271,6 @@ def tensorize_pokemon(
     idx += 1
     features[idx] = float(poke.ability == UNKNOWN)
     idx += 1
-    features[idx] = float(poke.tera_type == UNKNOWN)
-    idx += 1
-    features[idx] = float(poke.terastallized)
-    idx += 1
 
     return features
 
@@ -361,22 +357,21 @@ def tensorize_turn(
     # Field
     field = tensorize_field(obs.field, vocabs, build_vocab)
 
-    # Context features
+    # Context features (Gen 3: no can_tera)
     context = np.zeros(CONTEXT_FEATURE_DIM, dtype=np.float32)
     context[0] = obs.turn_number / 100.0  # Normalize turn number
     context[1] = obs.opponents_remaining / 6.0
     context[2] = obs.num_opponent_revealed / 6.0  # How many opponent Pokemon revealed
-    context[3] = float(obs.can_tera)
-    context[4] = float(obs.forced_switch)
-    context[5] = float(obs.is_lead_turn)
+    context[3] = float(obs.forced_switch)
+    context[4] = float(obs.is_lead_turn)
 
     # Previous moves (categorical)
     if build_vocab:
-        context[6] = vocabs.moves.add(obs.prev_player_move)
-        context[7] = vocabs.moves.add(obs.prev_opponent_move)
+        context[5] = vocabs.moves.add(obs.prev_player_move)
+        context[6] = vocabs.moves.add(obs.prev_opponent_move)
     else:
-        context[6] = vocabs.moves.encode(obs.prev_player_move)
-        context[7] = vocabs.moves.encode(obs.prev_opponent_move)
+        context[5] = vocabs.moves.encode(obs.prev_player_move)
+        context[6] = vocabs.moves.encode(obs.prev_opponent_move)
 
     # Legal mask
     legal_mask = np.array(obs.legal_action_mask[:NUM_ACTIONS], dtype=np.float32)
@@ -384,12 +379,11 @@ def tensorize_turn(
         legal_mask = np.pad(legal_mask, (0, NUM_ACTIONS - len(legal_mask)))
 
     # Action taken — remap from Metamon encoding to our canonical action space.
-    # Metamon: 0-3 = moves, 4-8 = switches (bench 0-4), 9-12 = tera moves
-    # Ours:    0-3 = moves, 4-7 = tera moves, 8-12 = switches (slot 2-6)
+    # Metamon Gen 3: 0-3 = moves, 4-8 = switches (bench 0-4)
+    # Ours Gen 3:    0-3 = moves, 4-8 = switches (slot 2-6)
     _METAMON_TO_CANONICAL = {
-        0: 0, 1: 1, 2: 2, 3: 3,       # moves 1-4 → moves 1-4
-        4: 8, 5: 9, 6: 10, 7: 11, 8: 12,  # switch bench 0-4 → switch 2-6
-        9: 4, 10: 5, 11: 6, 12: 7,     # tera moves 1-4 → tera moves 1-4
+        0: 0, 1: 1, 2: 2, 3: 3,           # moves 1-4 → moves 1-4
+        4: 4, 5: 5, 6: 6, 7: 7, 8: 8,     # switch bench 0-4 → switch 2-6
     }
     action_idx = -1
     if obs.action_taken:

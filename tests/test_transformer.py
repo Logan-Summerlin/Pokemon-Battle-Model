@@ -69,11 +69,10 @@ def config():
         num_item_classes=10,
         num_speed_buckets=5,
         num_role_archetypes=8,
-        num_tera_categories=4,
         num_move_families=10,
         use_value_head=True,
         value_loss_weight=0.1,
-        auxiliary_loss_weight=0.2,
+        auxiliary_loss_weight=0.3,
     )
 
 
@@ -317,7 +316,6 @@ class TestBattleTransformer:
             "item_targets": torch.randint(0, config.num_item_classes, (4, 6)),
             "speed_targets": torch.randint(0, config.num_speed_buckets, (4, 6)),
             "role_targets": torch.randint(0, config.num_role_archetypes, (4, 6)),
-            "tera_targets": torch.randint(0, config.num_tera_categories, (4, 6)),
             "move_family_targets": torch.randint(0, 2, (4, 6, config.num_move_families)),
         }
         loss, _ = compute_total_loss(
@@ -359,14 +357,12 @@ class TestLossFunctions:
             "item_logits": torch.randn(batch, 6, config.num_item_classes),
             "speed_logits": torch.randn(batch, 6, config.num_speed_buckets),
             "role_logits": torch.randn(batch, 6, config.num_role_archetypes),
-            "tera_logits": torch.randn(batch, 6, config.num_tera_categories),
             "move_family_logits": torch.randn(batch, 6, config.num_move_families),
         }
         targets = {
             "item_targets": torch.randint(0, config.num_item_classes, (batch, 6)),
             "speed_targets": torch.randint(0, config.num_speed_buckets, (batch, 6)),
             "role_targets": torch.randint(0, config.num_role_archetypes, (batch, 6)),
-            "tera_targets": torch.randint(0, config.num_tera_categories, (batch, 6)),
             "move_family_targets": torch.randint(0, 2, (batch, 6, config.num_move_families)),
         }
         loss, components = compute_auxiliary_loss(preds, targets)
@@ -411,7 +407,6 @@ class TestLossFunctions:
             "item_targets": torch.randint(0, config.num_item_classes, (4, 6)),
             "speed_targets": torch.randint(0, config.num_speed_buckets, (4, 6)),
             "role_targets": torch.randint(0, config.num_role_archetypes, (4, 6)),
-            "tera_targets": torch.randint(0, config.num_tera_categories, (4, 6)),
             "move_family_targets": torch.randint(0, 2, (4, 6, config.num_move_families)),
         }
 
@@ -438,7 +433,6 @@ class TestAuxiliaryLabels:
 
     def test_item_classification(self):
         from src.data.auxiliary_labels import classify_item, NUM_ITEM_CLASSES
-        assert 0 <= classify_item("heavydutyboots") < NUM_ITEM_CLASSES
         assert 0 <= classify_item("leftovers") < NUM_ITEM_CLASSES
         assert 0 <= classify_item("choiceband") < NUM_ITEM_CLASSES
         assert classify_item("") == classify_item("noitem")
@@ -446,17 +440,19 @@ class TestAuxiliaryLabels:
 
     def test_speed_classification(self):
         from src.data.auxiliary_labels import classify_speed
-        assert classify_speed(130) == 0  # very fast
-        assert classify_speed(100) == 1  # fast
-        assert classify_speed(80) == 2   # medium
-        assert classify_speed(50) == 3   # slow
-        assert classify_speed(30) == 4   # very slow
+        # Gen 3 thresholds: [110, 90, 65, 40]
+        assert classify_speed(130) == 0  # very fast (Jolteon)
+        assert classify_speed(100) == 1  # fast (Salamence)
+        assert classify_speed(80) == 2   # medium (Suicune)
+        assert classify_speed(50) == 3   # slow (Blissey)
+        assert classify_speed(30) == 4   # very slow (Snorlax)
 
     def test_move_families(self):
         from src.data.auxiliary_labels import classify_move_families, NUM_MOVE_FAMILIES
-        families = classify_move_families(["Sucker Punch", "Swords Dance", "Iron Head"])
+        # Gen 3 priority: ExtremeSpeed, Mach Punch, Quick Attack, Fake Out
+        families = classify_move_families(["ExtremeSpeed", "Swords Dance", "Iron Head"])
         assert len(families) == NUM_MOVE_FAMILIES
-        assert families[0] == 1  # priority (Sucker Punch)
+        assert families[0] == 1  # priority (ExtremeSpeed)
         assert families[5] == 1  # setup (Swords Dance)
 
     def test_empty_move_families(self):
