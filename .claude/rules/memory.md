@@ -8,7 +8,7 @@ Uses behavior cloning on human replay data with a hidden-information-aware archi
 - **Phases 0–3 complete**: Scope/metrics, Showdown integration, replay parser, baselines (RandomBot, HeuristicBot, MLP/GRU BC)
 - **Phase 4 active**: BattleTransformer model, compute/generalization experiments, P8-Lean optimization
 - **Phases 5–8 not started**: Synthetic fine-tuning, evaluation harness expansion, offline RL, enhancements
-- **Dataset**: 10K battles from Metamon (jakegrigsby/metamon-parsed-replays), Gen 3 OU, 1300+ Elo
+- **Dataset**: 100K battles from Metamon (jakegrigsby/metamon-parsed-replays), Gen 3 OU, stratified Elo sampling (all 1500+, equal bins 1000-1500)
 - **Migration**: Fully migrated from Gen 9 OU to Gen 3 OU (March 2026)
 
 ## Model Variants (all use `scripts/train_phase4.py`)
@@ -51,7 +51,7 @@ src/
   evaluation/  → battle_evaluator.py, offline_metrics.py
   synthetic/   → (stub, Phase 5)
 scripts/       → train_phase4.py (core), train_p8_1k.py, train_p8_lean.py, train_p4_25k.py,
-                 download_replays.py, process_dataset.py, evaluate_baselines.py, etc.
+                 download_replays.py, download_replays_stratified.py, process_dataset.py, evaluate_baselines.py, etc.
 tests/         → test files covering baselines, legality, parser, observation, tensorizer,
                  state, protocol, battle harness, transformer, Gen 3 mechanics
 data/processed/→ vocabs/, metadata.json, priors.json (battles/ gitignored)
