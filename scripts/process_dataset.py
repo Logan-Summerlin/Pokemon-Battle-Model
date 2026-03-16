@@ -8,6 +8,10 @@ Uses streaming processing to avoid loading all battles into memory at once.
 Supports multiple generations via --generation flag. Vocabularies are
 saved to generation-specific subdirectories (e.g., vocabs/gen3/, vocabs/gen9/).
 
+Both player perspectives of a battle are kept as separate training examples
+(using perspective_id for filenames). Splits are done by base battle_id to
+prevent data leakage — both perspectives always land in the same split.
+
 Usage:
     python scripts/process_dataset.py
     python scripts/process_dataset.py --generation gen3ou
@@ -20,7 +24,9 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import random
 import sys
+from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -30,6 +36,72 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def create_leakage_safe_splits(
+    perspective_ids: list[str],
+    battle_id_map: dict[str, str],
+    train_ratio: float = 0.8,
+    val_ratio: float = 0.1,
+    test_ratio: float = 0.1,
+    seed: int = 42,
+    output_dir: str | Path | None = None,
+) -> dict[str, list[str]]:
+    """Create train/val/test splits by base battle ID, then expand to perspective IDs.
+
+    Both perspectives of the same battle always end up in the same split.
+
+    Args:
+        perspective_ids: All perspective IDs (one per processed file).
+        battle_id_map: Maps perspective_id -> base battle_id.
+        train_ratio: Fraction for training set.
+        val_ratio: Fraction for validation set.
+        test_ratio: Fraction for test set.
+        seed: Random seed for reproducibility.
+        output_dir: Optional directory to save split manifests.
+
+    Returns:
+        Dict with "train", "val", "test" keys mapping to lists of perspective IDs.
+    """
+    # Group perspective IDs by base battle ID
+    battle_groups: dict[str, list[str]] = defaultdict(list)
+    for pid in perspective_ids:
+        bid = battle_id_map[pid]
+        battle_groups[bid].append(pid)
+
+    # Shuffle and split by base battle ID
+    rng = random.Random(seed)
+    base_ids = list(battle_groups.keys())
+    rng.shuffle(base_ids)
+
+    n = len(base_ids)
+    n_train = int(n * train_ratio)
+    n_val = int(n * val_ratio)
+
+    train_base = base_ids[:n_train]
+    val_base = base_ids[n_train : n_train + n_val]
+    test_base = base_ids[n_train + n_val :]
+
+    # Expand to perspective IDs
+    splits: dict[str, list[str]] = {
+        "train": [pid for bid in train_base for pid in battle_groups[bid]],
+        "val": [pid for bid in val_base for pid in battle_groups[bid]],
+        "test": [pid for bid in test_base for pid in battle_groups[bid]],
+    }
+
+    if output_dir:
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        for split_name, ids in splits.items():
+            with open(output_dir / f"{split_name}.json", "w") as f:
+                json.dump(ids, f)
+
+    logger.info(
+        f"Splits (by {n} unique battles): "
+        f"train={len(splits['train'])}, val={len(splits['val'])}, test={len(splits['test'])}"
+    )
+
+    return splits
 
 
 def main() -> None:
@@ -66,7 +138,6 @@ def main() -> None:
 
     import numpy as np
 
-    from src.data.dataset import create_splits
     from src.data.observation import build_observations
     from src.data.priors import MetagamePriors
     from src.data.replay_parser import iter_battles_from_directory
@@ -85,15 +156,20 @@ def main() -> None:
 
     metadata: dict = {
         "generation": generation,
-        "num_battles": 0,
+        "num_perspectives": 0,
+        "num_unique_battles": 0,
         "num_turns": 0,
         "num_wins": 0,
         "num_losses": 0,
         "avg_turns": 0.0,
         "elo_distribution": {},
-        "battle_ids": [],
+        "perspective_ids": [],
     }
     elo_counts: dict[str, int] = {}
+
+    # Track perspective_id -> battle_id mapping for leakage-safe splits
+    perspective_to_battle: dict[str, str] = {}
+    seen_battle_ids: set[str] = set()
 
     # Stream battles one at a time to avoid OOM
     logger.info(f"Processing battles from {args.input_dir} (streaming)...")
@@ -113,17 +189,24 @@ def main() -> None:
         if not seq:
             continue
 
+        # Use perspective_id for unique filenames (falls back to battle_id)
+        file_id = battle.perspective_id or battle.battle_id
+
         # Save as npz
-        battle_file = battles_dir / f"{battle.battle_id}.npz"
+        battle_file = battles_dir / f"{file_id}.npz"
         np.savez_compressed(str(battle_file), **seq)
+
+        # Track mapping
+        perspective_to_battle[file_id] = battle.battle_id
+        seen_battle_ids.add(battle.battle_id)
 
         # Update priors
         priors.update_from_battle(battle)
 
         # Update metadata
-        metadata["num_battles"] += 1
+        metadata["num_perspectives"] += 1
         metadata["num_turns"] += len(observations)
-        metadata["battle_ids"].append(battle.battle_id)
+        metadata["perspective_ids"].append(file_id)
 
         if battle.won:
             metadata["num_wins"] += 1
@@ -133,18 +216,19 @@ def main() -> None:
         elo_bucket = str((battle.player_elo // 100) * 100)
         elo_counts[elo_bucket] = elo_counts.get(elo_bucket, 0) + 1
 
-        if metadata["num_battles"] % 1000 == 0:
+        if metadata["num_perspectives"] % 1000 == 0:
             logger.info(
-                f"  Processed {metadata['num_battles']} battles "
+                f"  Processed {metadata['num_perspectives']} perspectives "
                 f"({metadata['num_turns']} turns)..."
             )
 
-    if metadata["num_battles"] == 0:
+    if metadata["num_perspectives"] == 0:
         logger.error("No valid battles processed!")
         sys.exit(1)
 
+    metadata["num_unique_battles"] = len(seen_battle_ids)
     metadata["elo_distribution"] = elo_counts
-    metadata["avg_turns"] = metadata["num_turns"] / metadata["num_battles"]
+    metadata["avg_turns"] = metadata["num_turns"] / metadata["num_perspectives"]
 
     # Save vocabularies to generation-specific subdirectory
     vocabs.freeze_all()
@@ -153,12 +237,17 @@ def main() -> None:
     # Also save to default vocabs/ for backward compatibility
     vocabs.save(output_dir / "vocabs")
 
+    # Save perspective -> battle_id mapping for reproducibility
+    with open(output_dir / "perspective_map.json", "w") as f:
+        json.dump(perspective_to_battle, f)
+
     # Save metadata
     with open(output_dir / "metadata.json", "w") as f:
         json.dump(metadata, f, indent=2)
 
     logger.info(
-        f"Saved {metadata['num_battles']} battles to {output_dir} "
+        f"Saved {metadata['num_perspectives']} perspectives "
+        f"({metadata['num_unique_battles']} unique battles) to {output_dir} "
         f"({metadata['num_turns']} total turns)"
     )
 
@@ -166,11 +255,11 @@ def main() -> None:
     logger.info("Saving metagame priors...")
     priors.save(output_dir / "priors.json")
 
-    # Create splits
-    logger.info("Creating train/val/test splits...")
-    battle_ids = metadata["battle_ids"]
-    splits = create_splits(
-        battle_ids,
+    # Create leakage-safe splits (group by base battle ID)
+    logger.info("Creating train/val/test splits (leakage-safe by battle ID)...")
+    splits = create_leakage_safe_splits(
+        perspective_ids=metadata["perspective_ids"],
+        battle_id_map=perspective_to_battle,
         train_ratio=0.8,
         val_ratio=0.1,
         test_ratio=0.1,
@@ -180,9 +269,10 @@ def main() -> None:
 
     # Print summary
     logger.info("\n=== Processing Summary ===")
-    logger.info(f"Total battles: {metadata['num_battles']}")
+    logger.info(f"Total perspectives: {metadata['num_perspectives']}")
+    logger.info(f"Unique battles: {metadata['num_unique_battles']}")
     logger.info(f"Total turns: {metadata['num_turns']}")
-    logger.info(f"Average turns per battle: {metadata['avg_turns']:.1f}")
+    logger.info(f"Average turns per perspective: {metadata['avg_turns']:.1f}")
     logger.info(f"Wins: {metadata['num_wins']}, Losses: {metadata['num_losses']}")
     logger.info(f"Train: {len(splits['train'])}, Val: {len(splits['val'])}, Test: {len(splits['test'])}")
     logger.info(f"Vocabulary sizes:")
