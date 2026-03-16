@@ -40,7 +40,15 @@ This is a ~6.25x increase in attention compute per example. For a 3-layer model 
 
 **Memory**: Window 5 examples also require ~2.5x more memory per batch element (more turn history stored). The collate function (`collate_windowed`) right-pads to the max window in each batch, so batches with mixed window sizes will have some padding waste.
 
-**Best practice for extension**: Research on context extension (primarily from the LLM literature) suggests that training on short contexts first, then fine-tuning on longer contexts, is effective and sometimes preferred over training on long contexts from scratch. The intuition: the model first learns local patterns (which move to make given the current state), then learns to leverage history (how earlier turns inform the current decision).
+**Best practice for extension**: Recent research strongly supports training on short contexts first, then fine-tuning on longer contexts:
+
+- **SkyLadder** (Zhu et al., NeurIPS 2025): Context window scheduling from short to long achieved up to 3.7% gains on standard benchmarks while being 22% faster than constant-window baselines. Supports linear, sinusoidal, and exponential ramp schedules.
+- **Cerebras Variable Sequence Length (VSL)** training showed 29% fewer FLOPs for equivalent performance when using short-then-long (e.g., 2K→8K) vs. long throughout.
+- **ProLong** (Princeton, 2024): Short-context pretraining + long-context fine-tuning outperformed Llama-3.1-8B-Instruct using only 5% as many training tokens. Notably, they observed a **temporary performance dip** when switching sequence lengths that recovers with continued training.
+
+The intuition: the model first learns local patterns (which move to make given the current state), then learns to leverage history (how earlier turns inform the current decision). For our window 2→5 transition (28→70 tokens), this is trivially small by LLM standards — no special techniques needed.
+
+**Positional encoding note**: If future work needs to extend beyond window 20 (280 tokens), consider switching from sinusoidal to **RoPE (Rotary Positional Embeddings)**, which enables context extension via YaRN or Position Interpolation with minimal fine-tuning. For the current W2→W5 plan, sinusoidal is perfectly adequate.
 
 ### 1.3 Warm-Starting Between Stages
 
@@ -298,3 +306,7 @@ Start training with window=2 for the first 30% of epochs, then switch to window=
 - OLMo 3 (Allen AI blog, 2025)
 - NVIDIA NeMo: Reset Learning Rate documentation
 - "Data Mixing Laws: Optimizing Data Mixtures" (ICLR 2025)
+- SkyLadder: "Context Window Scheduling for LLM Pretraining" (arXiv 2503.15450, NeurIPS 2025)
+- ProLong: "How to Train Long-Context Language Models Effectively" (arXiv 2410.02660, Princeton 2024)
+- YaRN: "Efficient Context Window Extension of Large Language Models" (arXiv 2309.00071, EleutherAI)
+- Cerebras Variable Sequence Length Training blog post (2024)
