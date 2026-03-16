@@ -5,7 +5,7 @@ P8-Lean Gen 3 defaults:
 - 3 layers / 224 hidden dim / 4 heads
 - FFN multiplier 3x
 - compressed embeddings (species=48, moves=24, items=16, abilities=16, types=12)
-- max window 5 (compact context for Gen 3's smaller metagame)
+- max window 2 (minimal history context for Gen 3's smaller metagame)
 - auxiliary head enabled (aux_weight=0.2)
 - value head disabled
 - dead feature pruning enabled
@@ -39,7 +39,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--weight-decay", type=float, default=0.01)
     parser.add_argument("--warmup-steps", type=int, default=300)
     parser.add_argument("--grad-accum", type=int, default=1)
-    parser.add_argument("--max-window", type=int, default=5)
+    parser.add_argument("--max-window", type=int, default=2)
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--num-workers", type=int, default=None)
     parser.add_argument("--prefetch-factor", type=int, default=4)
