@@ -130,6 +130,7 @@ class ParsedBattle:
     """A fully parsed battle trajectory."""
 
     battle_id: str = ""
+    perspective_id: str = ""  # unique per player POV (battle_id + player)
     format: str = ""
     player_elo: int = 0
     opponent_name: str = ""
@@ -291,7 +292,10 @@ def parse_filename_metadata(filename: str) -> dict[str, str]:
 
     Format: {battleid}_{ELO}_{player}_vs_{opponent}_{DD-MM-YYYY}_{WIN/LOSS}.json.lz4
 
-    Returns dict with keys: battle_id, elo, player, opponent, date, result
+    Returns dict with keys: battle_id, perspective_id, elo, player, opponent, date, result.
+    ``battle_id`` is the shared match identifier (same for both players).
+    ``perspective_id`` is ``{battle_id}_{player}`` and uniquely identifies a
+    single player's view of the battle so both POVs can be stored separately.
     """
     # Strip extensions
     basename = os.path.basename(filename)
@@ -300,6 +304,7 @@ def parse_filename_metadata(filename: str) -> dict[str, str]:
     parts = basename.split("_")
     result: dict[str, str] = {
         "battle_id": "",
+        "perspective_id": "",
         "elo": "0",
         "player": "",
         "opponent": "",
@@ -309,6 +314,7 @@ def parse_filename_metadata(filename: str) -> dict[str, str]:
 
     if len(parts) < 6:
         result["battle_id"] = basename
+        result["perspective_id"] = basename
         return result
 
     # The result is the last part (WIN/LOSS)
@@ -324,10 +330,12 @@ def parse_filename_metadata(filename: str) -> dict[str, str]:
         result["elo"] = parts[1] if len(parts) > 1 else "0"
         result["player"] = "_".join(parts[2:vs_idx])
         result["opponent"] = "_".join(parts[vs_idx + 1 : -2])
+        result["perspective_id"] = f"{parts[0]}_{result['player']}"
     except ValueError:
         # No "vs" found, use best-effort parsing
         result["battle_id"] = parts[0]
         result["elo"] = parts[1] if len(parts) > 1 else "0"
+        result["perspective_id"] = parts[0]
 
     return result
 
@@ -372,6 +380,7 @@ def load_battle_from_json(data: dict[str, Any], filename: str = "") -> ParsedBat
 
     return ParsedBattle(
         battle_id=meta.get("battle_id", ""),
+        perspective_id=meta.get("perspective_id", meta.get("battle_id", "")),
         format=fmt,
         player_elo=_safe_int(meta.get("elo", "0")),
         opponent_name=meta.get("opponent", ""),

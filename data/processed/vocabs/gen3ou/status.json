@@ -4,12 +4,12 @@
     "": 0,
     "unknown": 1,
     "nostatus": 2,
-    "tox": 3,
+    "slp": 3,
     "fnt": 4,
-    "brn": 5,
-    "par": 6,
+    "par": 5,
+    "tox": 6,
     "frz": 7,
-    "slp": 8,
+    "brn": 8,
     "psn": 9
   },
   "frozen": true

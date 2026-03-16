@@ -3,10 +3,10 @@
   "tokens": {
     "": 0,
     "unknown": 1,
-    "sandstorm": 2,
-    "noweather": 3,
-    "sunnyday": 4,
-    "raindance": 5,
+    "noweather": 2,
+    "sandstorm": 3,
+    "raindance": 4,
+    "sunnyday": 5,
     "hail": 6
   },
   "frozen": true

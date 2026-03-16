@@ -18,7 +18,7 @@ Structured transformer for Gen 3 OU (ADV) singles on Pokemon Showdown. Behavior 
 ## Training
 - Core trainer: `scripts/train_phase4.py` with wrapper scripts for specific configs
 - Current variants: P8 (4L/256d/4H, 3.6M params), P8-Lean (3L/224d/4H, ~1.95M), P4 (6L/384d/6H, 11.5M)
-- Data: Metamon dataset (gen3ou), 10K battles processed, 80/10/10 battle-level splits, 1300+ Elo
+- Data: Metamon dataset (gen3ou), 100K battles processed, 80/10/10 battle-level splits, stratified Elo (all 1500+, equal bins 1000-1500)
 - Pipeline: `.npz` tensors → `WindowedTurnDataset` → per-turn examples with sliding window
 - Loss: masked cross-entropy (policy) + auxiliary loss (weighted 0.2)
 
