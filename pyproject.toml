@@ -10,9 +10,9 @@ requires-python = ">=3.11"
 license = {text = "MIT"}
 
 dependencies = [
-    # ML framework
-    "torch>=2.2.0,<2.4",
-    "torchvision>=0.17.0,<0.19",
+    # ML framework (CUDA-enabled; install with: pip install torch --index-url https://download.pytorch.org/whl/cu121)
+    "torch>=2.2.0",
+    "torchvision>=0.17.0",
 
     # Data processing
     "numpy>=1.26.0",

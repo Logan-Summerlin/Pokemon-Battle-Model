@@ -54,6 +54,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no-pin-memory", action="store_true")
     parser.add_argument("--non-blocking-transfer", action="store_true")
     parser.add_argument("--blocking-transfer", action="store_true")
+    parser.add_argument("--optimizer", type=str, choices=["adamw", "muon", "hybrid"], default="adamw")
+    parser.add_argument("--muon-lr", type=float, default=0.02)
+    parser.add_argument("--muon-momentum", type=float, default=0.95)
+    parser.add_argument("--aux-warmup-fraction", type=float, default=0.0)
     parser.add_argument("--output-root", type=str, default="checkpoints/phase4_gen3_p8_1k")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without executing")
     return parser.parse_args()
@@ -199,6 +203,13 @@ def main() -> int:
             "--report-path",
             str(report_path),
         ]
+
+        if args.optimizer != "adamw":
+            cmd.extend(["--optimizer", args.optimizer])
+            cmd.extend(["--muon-lr", str(args.muon_lr)])
+            cmd.extend(["--muon-momentum", str(args.muon_momentum)])
+        if args.aux_warmup_fraction > 0:
+            cmd.extend(["--aux-warmup-fraction", str(args.aux_warmup_fraction)])
 
         if args.num_workers is not None:
             cmd.extend(["--num-workers", str(args.num_workers)])

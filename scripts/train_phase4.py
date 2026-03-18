@@ -56,8 +56,10 @@ from src.models.battle_transformer import (
     BattleTransformer,
     TransformerConfig,
     compute_total_loss,
+    get_aux_weight,
     TOKENS_PER_STEP,
 )
+from src.training.muon import Muon, CombinedOptimizer, split_params_for_muon
 from src.environment.action_space import NUM_ACTIONS
 
 logging.basicConfig(
@@ -240,7 +242,11 @@ def collate_windowed(batch: list[dict[str, torch.Tensor]]) -> dict[str, torch.Te
 
 
 class WarmupCosineScheduler:
-    """Cosine annealing with linear warmup."""
+    """Cosine annealing with linear warmup.
+
+    Supports per-param-group base learning rates, so CombinedOptimizer
+    (Muon + AdamW with different LRs) gets correct per-group scheduling.
+    """
 
     def __init__(self, optimizer, warmup_steps, total_steps, min_lr=1e-6):
         self.optimizer = optimizer
@@ -252,16 +258,17 @@ class WarmupCosineScheduler:
 
     def step(self):
         self._step += 1
-        lr = self._get_lr()
-        for pg in self.optimizer.param_groups:
-            pg["lr"] = lr
+        for pg, base_lr in zip(self.optimizer.param_groups, self.base_lrs):
+            pg["lr"] = self._get_lr(base_lr)
 
-    def _get_lr(self):
+    def _get_lr(self, base_lr=None):
+        if base_lr is None:
+            base_lr = self.base_lrs[0]
         if self._step < self.warmup_steps:
-            return self.base_lrs[0] * self._step / max(self.warmup_steps, 1)
+            return base_lr * self._step / max(self.warmup_steps, 1)
         progress = (self._step - self.warmup_steps) / max(self.total_steps - self.warmup_steps, 1)
         progress = min(progress, 1.0)
-        return self.min_lr + 0.5 * (self.base_lrs[0] - self.min_lr) * (1 + math.cos(math.pi * progress))
+        return self.min_lr + 0.5 * (base_lr - self.min_lr) * (1 + math.cos(math.pi * progress))
 
     def get_lr(self):
         return self.optimizer.param_groups[0]["lr"]
@@ -309,8 +316,13 @@ def forward_step(
     model: BattleTransformer,
     batch: dict[str, torch.Tensor],
     config: TransformerConfig,
+    aux_weight_override: float | None = None,
 ) -> tuple[torch.Tensor, dict[str, float], torch.Tensor, dict[str, torch.Tensor] | None]:
     """Forward pass for windowed turn data.
+
+    Args:
+        aux_weight_override: If set, overrides the config's auxiliary loss
+            weight (used for auxiliary loss warmup scheduling).
 
     Returns: (loss, loss_dict, policy_logits, auxiliary_preds)
     """
@@ -346,9 +358,28 @@ def forward_step(
         aux_targets=aux_targets,
         game_result=game_result,
         config=config,
+        aux_weight_override=aux_weight_override,
     )
 
     return loss, loss_dict, logits, output.auxiliary_preds
+
+
+def _unscale_optimizer(scaler, optimizer):
+    """Unscale gradients for optimizer (handles CombinedOptimizer)."""
+    if isinstance(optimizer, CombinedOptimizer):
+        for opt in optimizer.optimizers:
+            scaler.unscale_(opt)
+    else:
+        scaler.unscale_(optimizer)
+
+
+def _scaler_step(scaler, optimizer):
+    """Scaler step for optimizer (handles CombinedOptimizer)."""
+    if isinstance(optimizer, CombinedOptimizer):
+        for opt in optimizer.optimizers:
+            scaler.step(opt)
+    else:
+        scaler.step(optimizer)
 
 
 def train_epoch(
@@ -357,8 +388,21 @@ def train_epoch(
     amp_dtype: torch.dtype | None = None,
     scaler: torch.amp.GradScaler | None = None,
     non_blocking_transfer: bool = False,
-) -> dict[str, float]:
-    """Run one training epoch."""
+    aux_warmup_fraction: float = 0.0,
+    total_steps: int = 0,
+    global_step: int = 0,
+) -> tuple[dict[str, float], int]:
+    """Run one training epoch.
+
+    Args:
+        aux_warmup_fraction: Fraction of total_steps over which to ramp
+            the auxiliary loss weight from 0 to max (0.0 = disabled).
+        total_steps: Total training steps across all epochs.
+        global_step: Current global step count (updated in-place across epochs).
+
+    Returns:
+        (metrics_dict, updated_global_step)
+    """
     model.train()
     total_loss = total_policy = total_aux = total_value = 0.0
     total_correct = total_top3 = total_examples = n_batches = 0
@@ -367,8 +411,21 @@ def train_epoch(
 
     for batch_idx, batch in enumerate(loader):
         batch = {k: v.to(device, non_blocking=non_blocking_transfer) for k, v in batch.items()}
+
+        # Compute dynamic aux weight if warmup is enabled
+        aux_weight_override = None
+        if aux_warmup_fraction > 0.0 and total_steps > 0:
+            aux_weight_override = get_aux_weight(
+                step=global_step,
+                total_steps=total_steps,
+                max_weight=config.auxiliary_loss_weight,
+                warmup_fraction=aux_warmup_fraction,
+            )
+
         with _amp_context(amp_dtype):
-            loss, loss_dict, logits, _ = forward_step(model, batch, config)
+            loss, loss_dict, logits, _ = forward_step(
+                model, batch, config, aux_weight_override=aux_weight_override
+            )
 
         if scaler is not None:
             scaler.scale(loss / grad_accum).backward()
@@ -377,15 +434,16 @@ def train_epoch(
 
         if (batch_idx + 1) % grad_accum == 0:
             if scaler is not None:
-                scaler.unscale_(optimizer)
+                _unscale_optimizer(scaler, optimizer)
             nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
             if scaler is not None:
-                scaler.step(optimizer)
+                _scaler_step(scaler, optimizer)
                 scaler.update()
             else:
                 optimizer.step()
             scheduler.step()
             optimizer.zero_grad()
+            global_step += 1
 
         total_loss += loss_dict.get("total", 0.0)
         total_policy += loss_dict.get("policy", 0.0)
@@ -410,7 +468,7 @@ def train_epoch(
         "aux_loss": total_aux / n, "value_loss": total_value / n,
         "accuracy": total_correct / ne, "top3_accuracy": total_top3 / ne,
         "total_examples": total_examples,
-    }
+    }, global_step
 
 
 @torch.no_grad()
@@ -659,10 +717,11 @@ def evaluate_on_test(
 
 def save_checkpoint(model, optimizer, config, epoch, val_loss, checkpoint_dir, is_best=False):
     """Save model checkpoint."""
+    opt_state = optimizer.state_dict()
     state = {
         "epoch": epoch,
         "model_state_dict": model.state_dict(),
-        "optimizer_state_dict": optimizer.state_dict(),
+        "optimizer_state_dict": opt_state,
         "val_loss": val_loss,
         "model_class": "BattleTransformer",
         "config": {
@@ -801,6 +860,33 @@ def main() -> None:
         "--torch-compile",
         action="store_true",
         help="Enable torch.compile(model) for potentially better steady-state throughput.",
+    )
+    parser.add_argument(
+        "--optimizer",
+        choices=["adamw", "muon", "hybrid"],
+        default="adamw",
+        help="Optimizer: 'adamw' (default), 'muon' (all params), or 'hybrid' "
+             "(Muon for weight matrices, AdamW for embeddings/biases/norms).",
+    )
+    parser.add_argument(
+        "--muon-lr",
+        type=float,
+        default=0.02,
+        help="Learning rate for Muon optimizer (default: 0.02).",
+    )
+    parser.add_argument(
+        "--muon-momentum",
+        type=float,
+        default=0.95,
+        help="Momentum for Muon optimizer (default: 0.95).",
+    )
+    parser.add_argument(
+        "--aux-warmup-fraction",
+        type=float,
+        default=0.0,
+        help="Fraction of total training steps over which to linearly ramp "
+             "auxiliary loss weight from 0 to max (default: 0.0 = disabled). "
+             "Recommended: 0.15.",
     )
     args = parser.parse_args()
 
@@ -1001,11 +1087,47 @@ def main() -> None:
         "amp": amp_name,
         "prune_dead_features": args.prune_dead_features,
         "torch_compile": args.torch_compile,
+        "optimizer": args.optimizer,
+        "muon_lr": args.muon_lr if args.optimizer != "adamw" else None,
+        "muon_momentum": args.muon_momentum if args.optimizer != "adamw" else None,
+        "aux_warmup_fraction": args.aux_warmup_fraction,
     }
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr,
-                                   weight_decay=args.weight_decay, betas=(0.9, 0.999))
+    # Create optimizer
     total_steps = args.epochs * len(train_loader) // args.grad_accum
+
+    if args.optimizer == "adamw":
+        optimizer = torch.optim.AdamW(
+            model.parameters(), lr=args.lr,
+            weight_decay=args.weight_decay, betas=(0.9, 0.999),
+        )
+        logger.info(f"Optimizer: AdamW (lr={args.lr})")
+    elif args.optimizer == "muon":
+        optimizer = Muon(
+            model.parameters(), lr=args.muon_lr,
+            momentum=args.muon_momentum, weight_decay=args.weight_decay,
+        )
+        logger.info(f"Optimizer: Muon (lr={args.muon_lr}, momentum={args.muon_momentum})")
+    else:  # hybrid
+        muon_params, adam_params = split_params_for_muon(model)
+        muon_opt = Muon(
+            muon_params, lr=args.muon_lr,
+            momentum=args.muon_momentum, weight_decay=args.weight_decay,
+        )
+        adam_opt = torch.optim.AdamW(
+            adam_params, lr=args.lr,
+            weight_decay=args.weight_decay, betas=(0.9, 0.999),
+        )
+        optimizer = CombinedOptimizer(muon_opt, adam_opt)
+        logger.info(
+            f"Optimizer: Hybrid (Muon lr={args.muon_lr} for {len(muon_params)} weight matrices, "
+            f"AdamW lr={args.lr} for {len(adam_params)} embed/bias/norm params)"
+        )
+
+    if args.aux_warmup_fraction > 0:
+        logger.info(f"Aux loss warmup: {args.aux_warmup_fraction:.0%} of {total_steps} steps "
+                     f"({int(total_steps * args.aux_warmup_fraction)} warmup steps)")
+
     scheduler = WarmupCosineScheduler(optimizer, warmup_steps=args.warmup_steps,
                                        total_steps=total_steps)
 
@@ -1022,12 +1144,13 @@ def main() -> None:
     patience_counter = 0
     epoch_metrics_list = []
     epoch_resources_list = []
+    global_step = 0
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
 
     for epoch in range(1, args.epochs + 1):
         epoch_start = time.time()
-        train_metrics = train_epoch(
+        train_metrics, global_step = train_epoch(
             model,
             train_loader,
             optimizer,
@@ -1038,6 +1161,9 @@ def main() -> None:
             amp_dtype=amp_dtype,
             scaler=scaler,
             non_blocking_transfer=args.non_blocking_transfer,
+            aux_warmup_fraction=args.aux_warmup_fraction,
+            total_steps=total_steps,
+            global_step=global_step,
         )
         val_metrics = validate(
             model,

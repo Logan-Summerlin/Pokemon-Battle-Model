@@ -41,6 +41,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--prefetch-factor", type=int, default=6)
     p.add_argument("--amp", choices=["off", "fp16", "bf16", "auto"], default="auto")
     p.add_argument("--torch-compile", action="store_true")
+    p.add_argument("--optimizer", type=str, choices=["adamw", "muon", "hybrid"], default="adamw")
+    p.add_argument("--muon-lr", type=float, default=0.02)
+    p.add_argument("--muon-momentum", type=float, default=0.95)
+    p.add_argument("--aux-warmup-fraction", type=float, default=0.0)
     p.add_argument("--output-root", type=str, default="checkpoints/phase4_p8_10k_fast_w5")
     p.add_argument("--dry-run", action="store_true")
     return p.parse_args()
@@ -178,6 +182,12 @@ def main() -> int:
         ]
         if args.torch_compile:
             cmd.append("--torch-compile")
+        if args.optimizer != "adamw":
+            cmd.extend(["--optimizer", args.optimizer])
+            cmd.extend(["--muon-lr", str(args.muon_lr)])
+            cmd.extend(["--muon-momentum", str(args.muon_momentum)])
+        if args.aux_warmup_fraction > 0:
+            cmd.extend(["--aux-warmup-fraction", str(args.aux_warmup_fraction)])
 
         run_command(cmd, dry_run=args.dry_run)
 

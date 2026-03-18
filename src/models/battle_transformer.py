@@ -1011,6 +1011,33 @@ def compute_value_loss(
     return torch.tensor(0.0, device=value_logits.device, requires_grad=True)
 
 
+def get_aux_weight(
+    step: int,
+    total_steps: int,
+    max_weight: float = 0.2,
+    warmup_fraction: float = 0.15,
+) -> float:
+    """Compute auxiliary loss weight with linear warmup.
+
+    Ramps the auxiliary loss weight from 0 to max_weight over the first
+    warmup_fraction of training. This prevents noisy auxiliary gradients
+    from interfering with the policy head's early learning trajectory.
+
+    Args:
+        step: Current training step (0-indexed).
+        total_steps: Total number of training steps.
+        max_weight: Maximum auxiliary loss weight (reached after warmup).
+        warmup_fraction: Fraction of total_steps over which to ramp up.
+
+    Returns:
+        Current auxiliary loss weight.
+    """
+    warmup_steps = int(total_steps * warmup_fraction)
+    if warmup_steps <= 0 or step >= warmup_steps:
+        return max_weight
+    return max_weight * (step / warmup_steps)
+
+
 def compute_total_loss(
     output: TransformerOutput,
     action_targets: torch.Tensor,
@@ -1018,13 +1045,21 @@ def compute_total_loss(
     aux_targets: dict[str, torch.Tensor] | None = None,
     game_result: torch.Tensor | None = None,
     config: TransformerConfig | None = None,
+    aux_weight_override: float | None = None,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     """Compute composite loss: policy + auxiliary + value.
+
+    Args:
+        aux_weight_override: If provided, overrides the config's auxiliary
+            loss weight. Used by auxiliary loss warmup scheduling.
 
     Returns:
         (total_loss, loss_components_dict)
     """
-    aux_weight = config.auxiliary_loss_weight if config else 0.2
+    if aux_weight_override is not None:
+        aux_weight = aux_weight_override
+    else:
+        aux_weight = config.auxiliary_loss_weight if config else 0.2
     val_weight = config.value_loss_weight if config else 0.1
 
     loss_dict: dict[str, float] = {}
