@@ -189,13 +189,15 @@ cuda available True
 device NVIDIA GeForce RTX 4090
 ```
 
-If `cuda available` is `False`, the RunPod PyTorch template may need a different CUDA wheel. Run:
+If `cuda available` is `False`, the pre-installed PyTorch may be CPU-only. Reinstall with CUDA wheels:
 
 ```bash
 pip uninstall -y torch torchvision torchaudio
-pip install --index-url https://download.pytorch.org/whl/cu121 torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1
+pip install --index-url https://download.pytorch.org/whl/cu124 torch torchvision torchaudio
 pip install -e ".[dev]"
 ```
+
+> The project requires `torch>=2.4.0,<2.7`. PyTorch 2.4+ ships CUDA-enabled wheels on PyPI by default, so `pip install -e ".[dev]"` should work out of the box on most RunPod templates.
 
 ---
 
