@@ -10,9 +10,9 @@ requires-python = ">=3.11"
 license = {text = "MIT"}
 
 dependencies = [
-    # ML framework
-    "torch>=2.2.0,<2.4",
-    "torchvision>=0.17.0,<0.19",
+    # ML framework — PyTorch 2.4+ ships CUDA-enabled wheels on PyPI by default
+    "torch>=2.4.0,<2.7",
+    "torchvision>=0.19.0,<0.22",
 
     # Data processing
     "numpy>=1.26.0",
