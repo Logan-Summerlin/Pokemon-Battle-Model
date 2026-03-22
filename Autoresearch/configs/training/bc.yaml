@@ -1,0 +1,41 @@
+# Behavior Cloning Training Configuration
+# See IMPLEMENTATION_PLAN.md Phase 4.2 for training details.
+
+defaults:
+  - _self_
+
+# Optimizer
+optimizer: adamw
+learning_rate: 1.0e-4
+weight_decay: 0.01
+betas: [0.9, 0.999]
+
+# Schedule
+scheduler: cosine
+warmup_steps: 1000
+min_lr: 1.0e-6
+
+# Batch
+batch_size: 256
+gradient_accumulation_steps: 1
+
+# Training
+max_epochs: 50
+early_stopping_patience: 5
+early_stopping_metric: val_action_nll
+
+# Precision
+mixed_precision: true       # bf16 if available, else fp16
+
+# Checkpointing
+save_every_epoch: true
+keep_best_k: 3              # Keep top-k checkpoints by validation metric
+
+# Reproducibility
+seed: 42
+
+# Experiment tracking
+wandb:
+  project: pokemon-battle-model
+  group: bc
+  tags: ["bc", "gen3ou"]

@@ -1,0 +1,13 @@
+# Codex Configuration for AutoResearch
+# Restricts the Codex agent to only edit experiment files.
+# All source code, data pipeline, and tests are read-only.
+
+sandbox_mode = "workspace-write"
+approval_policy = "auto-edit"
+model = "o4-mini"
+
+[sandbox_workspace_write]
+# All source code (src/), scripts/, tests/, data/ are READ-ONLY.
+# The agent can only modify Autoresearch/run_experiment.py.
+writable_roots = []
+network_access = false

@@ -1,0 +1,37 @@
+# Structured Transformer Model Configuration (Gen 3 OU)
+# See IMPLEMENTATION_PLAN.md Phase 4 and GEN3_MIGRATION_PROPOSAL.md
+
+# Scaling ladder stages: smoke -> small -> medium -> full
+defaults:
+  - _self_
+
+# Encoder
+num_layers: 6
+hidden_dim: 384
+num_heads: 6
+dropout: 0.1
+activation: gelu
+
+# Input
+history_length: 20          # Number of past turns to include
+max_team_size: 6
+max_moves_per_pokemon: 4
+max_candidate_actions: 9    # 4 moves + 5 switches (no Tera in Gen 3)
+
+# Embeddings
+species_embedding_dim: 64
+move_embedding_dim: 32
+item_embedding_dim: 32
+ability_embedding_dim: 32
+type_embedding_dim: 16
+
+# Auxiliary hidden-info head
+auxiliary_loss_weight: 0.3   # Higher weight: hidden info more critical without team preview
+num_item_classes: 25         # Gen 3 item taxonomy (~25 classes)
+num_speed_buckets: 5         # Very fast, fast, medium, slow, very slow
+num_role_archetypes: 8       # Sweeper, wall, pivot, setter, etc.
+num_move_families: 10        # Priority, recovery, hazards, status, etc.
+
+# Value head (optional)
+use_value_head: true
+value_loss_weight: 0.1

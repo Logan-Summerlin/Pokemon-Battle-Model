@@ -1,0 +1,38 @@
+# Pokemon Showdown server configuration
+# Used by the battle environment to connect to a local Showdown instance.
+
+server:
+  host: localhost
+  port: 8000
+  protocol: ws
+
+# Server source
+# Pin to a specific commit for reproducibility.
+# Update this when upgrading the server version.
+source:
+  repo: "https://github.com/smogon/pokemon-showdown.git"
+  # Pin to a stable commit from March 2026
+  # TODO: Replace with exact commit SHA after initial setup
+  commit: "HEAD"
+  install_dir: "${oc.env:HOME}/pokemon-showdown"
+
+# Battle format
+battle:
+  format: gen3ou
+  rules:
+    - "Sleep Clause Mod"
+    - "Species Clause"
+    - "Evasion Moves Clause"
+    - "OHKO Clause"
+
+# Timeouts (seconds)
+timeouts:
+  connect: 10.0
+  message: 30.0
+  battle: 300.0  # 5 minutes max per battle
+
+# Logging
+logging:
+  level: INFO
+  save_replays: true
+  replay_dir: "data/replays"

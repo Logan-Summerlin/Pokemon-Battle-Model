@@ -1,0 +1,48 @@
+# Battle Evaluation Configuration
+# See EVALUATION_SPEC.md for metric definitions and thresholds.
+
+defaults:
+  - _self_
+
+# Game settings
+num_games_per_matchup: 200   # Minimum for gate evaluations; 500+ for final
+max_turns_per_game: 200      # Safety limit
+deterministic_seeds: true
+base_seed: 12345
+
+# Opponents
+opponents:
+  - random_bot
+  - heuristic_bot
+  - bc_baseline
+
+# Metrics to compute
+metrics:
+  win_rate: true
+  per_archetype_win_rate: true
+  action_accuracy_top1: true
+  action_accuracy_top3: true
+  nll: true
+  hidden_info_calibration: true
+  game_length_stats: true
+  action_diversity: true
+  illegal_action_rate: true
+
+# Archetype labels for stratified evaluation
+archetypes:
+  - hyper_offense
+  - bulky_offense
+  - balance
+  - stall
+  - rain
+  - sun
+  - sand
+  - baton_pass
+
+# Robustness
+uncommon_set_tests: true
+mirror_team_tests: true
+
+# Reporting
+confidence_level: 0.95       # Wilson confidence interval
+output_format: json           # json or csv
