@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit(Autoresearch/**)",
+      "Write(Autoresearch/**)",
+      "Edit(configs/**)",
+      "Edit(scripts/train_phase4.py)",
+      "Edit(src/models/battle_transformer.py)",
+      "Edit(src/data/dataset.py)",
+      "Edit(src/data/auxiliary_labels.py)",
+      "Bash(python scripts/train_phase4.py *)",
+      "Bash(python Autoresearch/*.py *)",
+      "Bash(python -m pytest *)",
+      "Bash(pytest *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git log *)",
+      "Bash(git push *)",
+      "Bash(ls *)",
+      "Bash(nvidia-smi)",
+      "Bash(python -c *)",
+      "Bash(pip install *)",
+      "Bash(cat Autoresearch/*)"
+    ],
+    "deny": [
+      "Edit(src/data/observation.py)",
+      "Edit(src/data/tensorizer.py)",
+      "Edit(src/data/replay_parser.py)",
+      "Edit(data/splits/**)",
+      "Edit(docs/EVALUATION_SPEC.md)",
+      "Bash(rm -rf *)",
+      "Bash(rm -r data/*)",
+      "Bash(rm -r checkpoints/*)"
+    ]
+  }
+}
