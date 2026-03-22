@@ -34,10 +34,7 @@ The project succeeds only if it improves both **quality** and **speed** under a 
 - Accuracy on:
   - move turns,
   - switch turns,
-  - lead turns,
-  - late-game turns,
-  - turns with forced switches,
-  - turns under status / residual pressure.
+  - player decisionmaking
 
 ### Speed metrics
 - Wall-clock time to reach:
@@ -75,7 +72,6 @@ This plan includes only work that can improve supervised move prediction on the 
 - Offline RL.
 - Reward engineering.
 - Full battle-strength optimization.
-- Gen 1 OU transfer.
 - Synthetic scenario generation unless used strictly as supervised augmentation for move prediction.
 - Massive autonomous repo-wide code rewriting.
 
@@ -221,7 +217,6 @@ The representation should include, at minimum:
 - field conditions,
 - turn history summary,
 - legal action mask,
-- move PP or a suitable abstraction,
 - known residual damage / weather / sand context,
 - trapped or forced-switch state,
 - hidden-information placeholders for unknown opponent details.
@@ -243,7 +238,7 @@ The key rule is to improve representation while keeping the benchmark fixed.
 The model family should stay narrow.
 
 ### Recommended model family
-Use a compact transformer-style or sequence-plus-state architecture that can comfortably fit and train on one A40.
+Use a compact transformer-style architecture that can comfortably fit and train on one A40.
 
 ### Keep the search space small
 The initial search space should be limited to:
@@ -444,7 +439,7 @@ This prevents the system from chasing tiny accuracy gains that waste large amoun
 Goal: make the baseline reproducible and measurable.
 
 Deliverables:
-- frozen dataset version,
+- frozen dataset version (subset of Metamon Replay dataset),
 - frozen split file,
 - reproducible baseline run,
 - evaluation script,
@@ -455,7 +450,7 @@ Deliverables:
 Goal: improve the training target before architecture expansion.
 
 Tasks:
-- enforce >1300 Elo filter,
+- enforce >1300 Elo filter for testing,
 - clean parsing edge cases,
 - deduplicate,
 - test battle and turn weighting,
@@ -511,10 +506,11 @@ The first 15–25 agent cycles should focus on the most likely wins.
 
 ### Highest-value experiment buckets
 1. **Better data filtering**
-   - stricter Elo threshold,
+   - different Elo thresholds for training,
    - replay cleanup,
    - turn deduplication,
    - hard-turn weighting.
+   - curriculum training stages
 
 2. **Better masking and label handling**
    - ensure illegal actions are impossible,
@@ -541,7 +537,7 @@ These are much more likely to pay off than grander redesigns.
 ## 20. Concrete task breakdown
 
 ### Workstream A: data
-- Build the >1300 Elo replay manifest.
+- Build the replay dataset.
 - Parse to per-turn decision records.
 - Validate legal actions per record.
 - Build split manifests.
@@ -767,7 +763,7 @@ At the end of the project, the output should be:
 The immediate next actions should be:
 
 1. Freeze and benchmark the current 50k-battle anchor.
-2. Build the strict >1300 Elo dataset manifest and held-out splits.
+2. Build the reply dataset manifest and held-out splits.
 3. Add a one-command evaluation harness for quality and throughput.
 4. Profile the current training pipeline on A40.
 5. Run the first short experiment slate on:
