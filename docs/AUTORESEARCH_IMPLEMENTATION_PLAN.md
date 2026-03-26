@@ -43,7 +43,7 @@ and critically evaluates that plan against the actual state of the codebase and 
 | Functioning codebase for loading/parsing | **Fully functional** pipeline | Aligned |
 | Legal action reconstruction | **Complete** with legal mask | Aligned |
 | Single A40 GPU | Currently GTX 1650; A40 = **12x more VRAM** (48GB vs 4GB) | Massive upgrade — unlocks larger batch sizes, models |
-| Codex + Claude Code setup | Need to install on RunPod | New setup required |
+| Claude Code setup | Need to install on RunPod | New setup required |
 
 ---
 
@@ -133,7 +133,6 @@ autoresearch/
 ├── notes/                   # Per-experiment markdown notes
 │   └── 000_anchor.md
 └── prompts/                 # Agent prompt templates
-    ├── codex_template.md
     └── claude_code_template.md
 ```
 
@@ -307,32 +306,30 @@ Reports:
 
 ## 5. Agent Operating Model
 
-### Claude Code Responsibilities
+### Single Agent: Claude Code
+
+Claude Code is the sole autonomous agent, responsible for the entire research loop:
 
 1. **Experiment planning:** Analyze leaderboard, propose next experiments, rank hypotheses
-2. **Log interpretation:** Read training reports, identify trends, diagnose issues
+2. **Config generation:** Create experiment config files in `autoresearch/configs/`
 3. **Code changes:** Implement model/data/loss modifications within approved edit surface
-4. **Research notes:** Write structured per-experiment analysis
-5. **Bug investigation:** Debug issues like the broken aux heads
-
-### Codex Responsibilities
-
-1. **Config generation:** Create experiment config files
-2. **Script fixes:** Patch throughput issues, profiling utilities
-3. **Boilerplate:** Experiment launch scripts, result aggregation
-4. **Log parsing:** Extract metrics from training reports
+4. **Script maintenance:** Improve `run_experiment.py`, fix throughput issues, add profiling
+5. **Log interpretation:** Read training reports, extract metrics, identify trends, diagnose issues
+6. **Research notes:** Write structured per-experiment analysis
+7. **Bug investigation:** Debug issues like the broken aux heads
+8. **Git state management:** Commit before experiments, revert on failure, advance on success
 
 ### Approved Edit Surface
 
-Agents may freely modify:
-- `autoresearch/` — all files
+Claude Code may freely modify:
+- `autoresearch/` — all files (configs, run_experiment.py, notes, registry)
 - `configs/` — YAML configs
-- `scripts/train_phase4.py` — training loop (with review)
-- `src/models/battle_transformer.py` — model architecture (with review)
+- `scripts/train_phase4.py` — training loop
+- `src/models/battle_transformer.py` — model architecture
 - `src/data/dataset.py` — data loading
 - `src/data/auxiliary_labels.py` — aux label construction
 
-Agents must NOT modify without explicit approval:
+Claude Code must NOT modify:
 - `src/data/observation.py` — observation construction (affects data integrity)
 - `src/data/tensorizer.py` — tensorization (affects data integrity)
 - `src/data/replay_parser.py` — parsing (affects data integrity)
@@ -343,7 +340,7 @@ Agents must NOT modify without explicit approval:
 
 ## 6. Experiment Loop Protocol
 
-Each agent cycle follows this protocol:
+Each experiment cycle follows this protocol:
 
 ```
 1. READ    → Load leaderboard, identify current champion
@@ -404,7 +401,7 @@ Based on analysis of current weaknesses and available headroom:
 | Aux heads remain broken after debug | Low | Medium | Disable aux loss, focus on policy only |
 | Window size increase causes OOM | Medium | Low | Gradient accumulation, reduce batch size |
 | 100K data doesn't help (ceiling) | Low | Medium | Focus on data quality over quantity |
-| Agents make conflicting changes | Medium | High | Single-agent-per-file ownership, git branches |
+| Agent breaks codebase | Medium | High | Git revert after every failed experiment; deny list on protected files |
 | A40 throughput bottleneck is CPU | Medium | Medium | Profile first, optimize dataloader |
 | Overfitting on larger models | Medium | Medium | Dropout sweep, early stopping, regularization |
 
@@ -420,17 +417,48 @@ Based on analysis of current weaknesses and available headroom:
 | `autoresearch/experiment_registry.json` | Machine-readable log |
 | `autoresearch/configs/anchor.yaml` | Frozen anchor config |
 | `autoresearch/notes/000_anchor.md` | Anchor experiment note |
-| `autoresearch/prompts/codex_template.md` | Codex agent prompt |
 | `autoresearch/prompts/claude_code_template.md` | Claude Code agent prompt |
+
+## 10. Files to Remove (Codex Cleanup)
+
+| File | Reason |
+|------|--------|
+| `Autoresearch/.codex/AGENTS.md` | Codex agent instructions — single-agent model, no longer needed |
+| `Autoresearch/.codex/config.toml` | Codex sandbox configuration — no longer needed |
+| `Autoresearch/prompts/codex_template.md` | Codex prompt template — no longer needed |
+
+After deletion, the `.codex/` directory should be completely removed from the Autoresearch tree.
 
 ---
 
-## 10. Immediate Next Steps
+## 11. Settings Updates for Autonomous Claude Code
 
-1. Create the `autoresearch/` directory structure
-2. Implement `eval_harness.py` by wrapping existing evaluation logic from `train_phase4.py`
-3. Register the P8-Lean 50K anchor as experiment #0
-4. Debug auxiliary speed/role head 0% accuracy issue
-5. Profile training pipeline on A40 (batch size sweep)
-6. Run first experiment: window size 2 → 10 on 50K battles
-7. Run second experiment: 100K battles with window=2 (isolate data scaling effect)
+The current `.claude/settings.json` needs these additions to support fully autonomous operation:
+
+| Permission | Why Needed |
+|-----------|-----------|
+| `Bash(git reset *)` | Revert failed experiments (Karpathy-style) |
+| `Bash(git checkout *)` | Create experiment branches |
+| `Bash(git pull *)` | Stay in sync before commits |
+| `Bash(grep *)` | Inspect training logs for metrics |
+| `Bash(tail *)` | Read last N lines of crash logs |
+| `Bash(head *)` | Read first N lines of output files |
+| `Bash(wc *)` | Count data files, verify dataset size |
+
+See `AUTORESEARCH_FULL_AUTONOMY_PLAN.md` for the complete permissions JSON.
+
+---
+
+## 12. Immediate Next Steps
+
+1. Delete `Autoresearch/.codex/` directory (AGENTS.md + config.toml)
+2. Delete `Autoresearch/prompts/codex_template.md` if it exists
+3. Update `Autoresearch/.claude/settings.json` to full-autonomy permissions
+4. Update `Autoresearch/.claude/rules/memory.md` — remove Codex references
+5. Add NEVER STOP directive, git-revert protocol, crash recovery, and priority queue to `Autoresearch/CLAUDE.md`
+6. Create the `autoresearch/` directory structure
+7. Implement `eval_harness.py` by wrapping existing evaluation logic from `train_phase4.py`
+8. Register the P8-Lean 50K anchor as experiment #0
+9. Debug auxiliary speed/role head 0% accuracy issue
+10. Test the full autonomous loop locally with `--mode smoke`
+11. Push to GitHub, launch RunPod, prompt Claude Code once

@@ -1,8 +1,8 @@
-# Plan: Autonomous Dual-Agent AutoResearch Operation
+# Plan: Autonomous Single-Agent AutoResearch Operation
 
 ## Goal
 
-Transform the Pokemon Battle AutoResearch system into a fully autonomous dual-agent research loop. Claude Code and Codex each run continuously in their respective roles, coordinating through a shared file-based communication protocol. Both agents follow the "NEVER STOP" directive independently, and neither requires human routing between them.
+Transform the Pokemon Battle AutoResearch system into a fully autonomous single-agent research loop. One Claude Code agent runs experiments indefinitely until interrupted, modeled after Karpathy's autoresearch. No human routing, no second agent, no coordination overhead.
 
 ---
 
@@ -34,108 +34,102 @@ Human reviews -> Training runs -> Claude Code analyzes -> Human decides next dir
 
 | Gap | Description | Severity |
 |-----|-------------|----------|
-| **Two agents need coordination** | Claude Code and Codex have different roles; coordination currently requires human routing | HIGH |
-| **No inter-agent communication** | Agents can't request work from each other or share findings | HIGH |
+| **Two agents required** | Claude Code and Codex have different roles; coordination requires human routing | HIGH |
 | **No automatic revert** | Failed experiments aren't automatically reverted via git | HIGH |
 | **No crash recovery protocol** | If training crashes, the loop stalls | HIGH |
 | **Config + code separation** | Experiments defined in YAML configs AND code changes | MEDIUM |
+| **Codex files add complexity** | `.codex/AGENTS.md` and `.codex/config.toml` define a second agent that won't exist | MEDIUM |
 
 ---
 
-## 3. The Dual-Agent Autonomy Plan
+## 3. The Single-Agent Autonomy Plan
 
-### Phase A: File-Based Inter-Agent Communication Protocol
+### Phase A: Remove Codex and Consolidate to Claude Code
 
-The core problem with two autonomous agents is coordination. Human routing is eliminated by introducing a **shared message queue** — a set of files both agents read and write.
+**Eliminate Codex entirely.** One agent, one loop, zero coordination overhead.
 
-**Directory structure:**
+Claude Code is capable of everything Codex was responsible for: config generation, script fixes, log parsing, and metric extraction. Splitting these across two agents added coordination complexity with no real benefit for autonomous operation.
 
-```
-Autoresearch/comms/
-├── task_queue.json          # Shared task queue (both agents read/write)
-├── inbox_claude_code/       # Messages TO Claude Code FROM Codex
-│   └── msg_001.json
-├── inbox_codex/             # Messages TO Codex FROM Claude Code
-│   └── msg_001.json
-└── completed/               # Processed messages (audit trail)
-    └── msg_001.json
-```
+**Files to remove from the Autoresearch repository:**
 
-**Message schema:**
+| File | Reason for Removal |
+|------|-------------------|
+| `Autoresearch/.codex/AGENTS.md` | Codex agent instructions — no longer needed |
+| `Autoresearch/.codex/config.toml` | Codex sandbox configuration — no longer needed |
+| `Autoresearch/prompts/codex_template.md` | Codex prompt template — no longer needed |
+
+**Files to update:**
+
+| File | Change |
+|------|--------|
+| `Autoresearch/.claude/settings.json` | Expand permissions to cover all tasks Claude Code now owns (configs, run_experiment.py, etc.) |
+| `Autoresearch/.claude/rules/memory.md` | Update to reflect single-agent model |
+| `Autoresearch/AUTORESEARCH_PLAN.md` | Remove all Codex references from agent operating model |
+
+**New `.claude/settings.json` for full autonomy:**
 
 ```json
 {
-  "id": "msg_001",
-  "from": "claude_code",
-  "to": "codex",
-  "timestamp": "2026-03-25T10:30:00Z",
-  "type": "task_request",
-  "priority": "high",
-  "subject": "Generate config for window_size_10 experiment",
-  "body": "Create Autoresearch/configs/ar3_02a_window10.yaml with max_window=10, all other params matching anchor.yaml",
-  "context": {
-    "parent_experiment": "AR0-anchor",
-    "experiment_id": "AR3-02a",
-    "hypothesis": "Increasing window from 2 to 10 will improve switch prediction"
-  },
-  "status": "pending"
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit(Autoresearch/**)",
+      "Write(Autoresearch/**)",
+      "Edit(configs/**)",
+      "Edit(scripts/train_phase4.py)",
+      "Edit(src/models/battle_transformer.py)",
+      "Edit(src/data/dataset.py)",
+      "Edit(src/data/auxiliary_labels.py)",
+      "Bash(python scripts/train_phase4.py *)",
+      "Bash(python Autoresearch/*.py *)",
+      "Bash(python -m pytest *)",
+      "Bash(pytest *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git log *)",
+      "Bash(git push *)",
+      "Bash(git reset *)",
+      "Bash(git checkout *)",
+      "Bash(git pull *)",
+      "Bash(ls *)",
+      "Bash(nvidia-smi)",
+      "Bash(python -c *)",
+      "Bash(pip install *)",
+      "Bash(cat Autoresearch/*)",
+      "Bash(grep *)",
+      "Bash(tail *)",
+      "Bash(head *)",
+      "Bash(wc *)"
+    ],
+    "deny": [
+      "Edit(src/data/observation.py)",
+      "Edit(src/data/tensorizer.py)",
+      "Edit(src/data/replay_parser.py)",
+      "Edit(data/splits/**)",
+      "Edit(docs/EVALUATION_SPEC.md)",
+      "Bash(rm -rf *)",
+      "Bash(rm -r data/*)",
+      "Bash(rm -r checkpoints/*)"
+    ]
+  }
 }
 ```
 
-**Message types:**
+Key additions vs current settings:
+- `git reset`, `git checkout`, `git pull` — needed for the revert protocol
+- `grep`, `tail`, `head`, `wc` — needed for log inspection and crash diagnosis
+- All `Autoresearch/**` write access — Claude Code now owns configs, run_experiment.py, notes, everything
 
-| Type | From | To | Purpose |
-|------|------|----|---------|
-| `task_request` | Claude Code | Codex | Ask Codex to generate configs, fix scripts, parse logs |
-| `task_complete` | Codex | Claude Code | Report that a requested task is done, with results |
-| `finding` | Either | Either | Share an observation (e.g., "OOM at batch 1024", "aux head still 0%") |
-| `code_change_needed` | Codex | Claude Code | Codex identified a change needed in a file it can't edit |
-| `experiment_result` | Claude Code | Codex | Share results so Codex can adjust future configs |
-| `status_update` | Either | Either | "I'm running experiment X", "I'm idle and waiting for tasks" |
+### Phase B: Implement Automatic Git-Based State Management
 
-**Agent loop integration:**
-
-Both agents add a communication check to the start of every loop iteration:
-
-```
-BEFORE each experiment iteration:
-1. CHECK inbox for new messages
-2. PROCESS any pending messages (fulfill task requests, read findings)
-3. MOVE processed messages to completed/
-4. PROCEED with experiment loop
-```
-
-This is non-blocking — if the inbox is empty, the agent proceeds immediately.
-
-### Phase B: Defined Agent Roles for Autonomous Operation
-
-**Claude Code** is the **research lead**:
-1. Reads the leaderboard, selects the next experiment hypothesis
-2. Sends task requests to Codex for config generation and script work
-3. Makes model/data/loss code changes (files Codex can't edit)
-4. Runs experiments via `run_experiment.py`
-5. Analyzes results, writes experiment notes
-6. Decides keep/discard based on the promotion rules
-7. Updates the leaderboard and registry
-8. Reads Codex's inbox for `code_change_needed` requests and fulfills them
-
-**Codex** is the **research engineer**:
-1. Reads Claude Code's task requests from its inbox
-2. Generates experiment configs in `Autoresearch/configs/`
-3. Improves `Autoresearch/run_experiment.py` (its primary edit target)
-4. Parses training logs, extracts metrics
-5. Sends `code_change_needed` messages when it identifies issues in read-only files
-6. Sends `finding` messages when it discovers useful patterns in results
-7. When idle (no pending tasks), proactively reviews recent experiment logs and sends analysis findings
-
-**Key principle:** Neither agent blocks on the other. If Claude Code needs a config and Codex hasn't produced it yet, Claude Code generates a minimal inline config and continues. If Codex has no pending tasks, it reviews logs and sends findings rather than stopping.
-
-### Phase C: Implement Automatic Git-Based State Management
-
-Add the Karpathy-style branch/revert protocol to both agents' instructions:
+Add the Karpathy-style branch/revert protocol:
 
 ```markdown
-## Git Protocol (Mandatory for Both Agents)
+## Git Protocol (Mandatory)
 
 Before EVERY experiment:
 1. `git add -A && git commit -m "EXP-{id}: {description}"`
@@ -146,17 +140,9 @@ After EVERY experiment:
 - If crashed: `git reset --hard HEAD~1`, log as crash, move on
 
 The branch always represents the current best configuration.
-
-Git conflict resolution:
-- Both agents work on the SAME branch
-- Before committing, always `git pull --rebase` first
-- If rebase conflicts occur, prefer the version with better metrics
-- Communication files (comms/) should never conflict (unique message IDs)
 ```
 
-### Phase D: Crash Recovery
-
-Add explicit crash handling to the experiment loop:
+### Phase C: Crash Recovery
 
 ```markdown
 ## Crash Handling
@@ -167,14 +153,13 @@ If `run_experiment.py` crashes:
 3. If it crashes again or the idea is fundamentally broken:
    - Log as "crash" in the registry
    - `git reset --hard HEAD~1`
-   - Send a `finding` message to the other agent describing the crash
    - Move on to the next hypothesis
 4. NEVER spend more than 10 minutes debugging a single crash
 ```
 
-### Phase E: Autonomous Idea Generation
+### Phase D: Autonomous Idea Generation
 
-Build an idea queue into CLAUDE.md that Claude Code works through:
+Build an idea queue into CLAUDE.md that the agent works through:
 
 ```markdown
 ## Experiment Priority Queue
@@ -216,57 +201,23 @@ Look for patterns: which changes helped? Which interaction effects remain untest
 
 ---
 
-## 4. Communication Protocol in Detail
+## 4. Claude Code's Full Responsibility Set
 
-### Startup Sequence
+With Codex removed, Claude Code owns the entire research loop:
 
-When both agents are launched:
+| Responsibility | Previously | Now |
+|---------------|-----------|-----|
+| Experiment planning | Claude Code | Claude Code |
+| Config generation | Codex | Claude Code |
+| Code changes (model, data, loss) | Claude Code | Claude Code |
+| Script fixes (run_experiment.py) | Codex | Claude Code |
+| Log parsing and metric extraction | Codex | Claude Code |
+| Result analysis and notes | Claude Code | Claude Code |
+| Leaderboard updates | Claude Code | Claude Code |
+| Bug investigation | Claude Code | Claude Code |
+| Git state management (commit/revert) | Neither (manual) | Claude Code |
 
-```
-1. Claude Code starts first:
-   - Reads CLAUDE.md and program.md
-   - Verifies data and anchor checkpoint
-   - Creates experiment branch: git checkout -b autoresearch/<date>
-   - Creates Autoresearch/comms/ directory structure
-   - Writes initial status_update to Codex inbox: "Session started, beginning with Priority 1 experiments"
-   - Begins experiment loop
-
-2. Codex starts (can be simultaneous or shortly after):
-   - Reads AGENTS.md
-   - Checks its inbox for messages
-   - If task_request pending: fulfill it
-   - If no tasks: review experiment_registry.json and recent notes, send findings
-   - Enters its own loop: check inbox -> work -> check inbox -> work
-```
-
-### Communication Cadence
-
-| Event | Claude Code Action | Codex Action |
-|-------|-------------------|--------------|
-| New experiment planned | Sends `task_request` to Codex for config | - |
-| Config needed | Proceeds with inline config if Codex hasn't responded | Generates config when it sees the request |
-| Experiment completes | Sends `experiment_result` to Codex | Reads result, updates analysis, may send `finding` |
-| Code change needed in read-only file | - | Sends `code_change_needed` to Claude Code |
-| Bug discovered | Sends `finding` to Codex | Sends `finding` to Claude Code |
-| Agent idle | Generates new hypotheses from results | Reviews logs and sends analysis findings |
-
-### Conflict Avoidance
-
-The agents have **non-overlapping edit surfaces** by design:
-
-| Files | Claude Code | Codex |
-|-------|------------|-------|
-| `src/models/battle_transformer.py` | Read/Write | Read only |
-| `src/data/dataset.py` | Read/Write | Read only |
-| `scripts/train_phase4.py` | Read/Write | Read only |
-| `Autoresearch/run_experiment.py` | Read only | Read/Write |
-| `Autoresearch/configs/` | Read only | Read/Write |
-| `Autoresearch/comms/inbox_codex/` | Write | Read |
-| `Autoresearch/comms/inbox_claude_code/` | Read | Write |
-| `Autoresearch/notes/` | Read/Write | Read only |
-| `Autoresearch/experiment_registry.json` | Read/Write | Read only |
-
-This means git conflicts should be extremely rare. The only shared-write location is `Autoresearch/comms/completed/`, which uses unique message IDs and is append-only.
+This is actually simpler than the dual-agent model — no coordination, no message passing, no conflict avoidance. The agent plans, implements, runs, evaluates, and records in a single tight loop.
 
 ---
 
@@ -275,57 +226,38 @@ This means git conflicts should be extremely rare. The only shared-write locatio
 | Step | Action | Time |
 |------|--------|------|
 | 1 | Fix repo issues (pyproject.toml, vocabs, directories) per AUTORESEARCH_REPO_FIXES.md | 30 min |
-| 2 | Create `Autoresearch/comms/` directory structure with inbox directories | 5 min |
-| 3 | Add communication protocol instructions to `Autoresearch/CLAUDE.md` | 15 min |
-| 4 | Add communication protocol instructions to `Autoresearch/.codex/AGENTS.md` | 15 min |
-| 5 | Add "NEVER STOP" directive to both agents' instruction files | 10 min |
-| 6 | Add git-revert protocol to `run_experiment.py` (auto-revert on failure) | 30 min |
-| 7 | Add crash recovery instructions to both agents' instruction files | 10 min |
-| 8 | Add the experiment priority queue to `Autoresearch/CLAUDE.md` | 15 min |
-| 9 | Update `.claude/settings.json` to allow comms directory operations | 5 min |
-| 10 | Update `.codex/config.toml` to allow writing to comms and configs | 5 min |
-| 11 | Test the full loop locally with `--mode smoke` | 15 min |
-| 12 | Push to GitHub | 5 min |
-| 13 | Launch RunPod, clone, install, launch both agents | 20 min |
+| 2 | Delete `Autoresearch/.codex/` directory (AGENTS.md + config.toml) | 2 min |
+| 3 | Delete `Autoresearch/prompts/codex_template.md` if it exists | 1 min |
+| 4 | Update `Autoresearch/.claude/settings.json` to the full-autonomy permissions above | 5 min |
+| 5 | Update `Autoresearch/.claude/rules/memory.md` — remove all Codex references, add single-agent protocol | 10 min |
+| 6 | Add "NEVER STOP" directive to `Autoresearch/CLAUDE.md` (from AUTORESEARCH_AGENT_MOTIVATION.md) | 10 min |
+| 7 | Add git-revert protocol to `Autoresearch/CLAUDE.md` | 5 min |
+| 8 | Add crash recovery instructions to `Autoresearch/CLAUDE.md` | 5 min |
+| 9 | Add the experiment priority queue to `Autoresearch/CLAUDE.md` | 10 min |
+| 10 | Add auto-revert logic to `run_experiment.py` (revert on failure, keep on success) | 30 min |
+| 11 | Remove Codex references from `Autoresearch/AUTORESEARCH_PLAN.md` agent operating model section | 10 min |
+| 12 | Test the full loop locally with `--mode smoke` | 15 min |
+| 13 | Push to GitHub | 5 min |
+| 14 | Launch RunPod, clone, install, prompt Claude Code once | 20 min |
 
-**Total conversion time: ~3 hours**
+**Total conversion time: ~2.5 hours**
 
 ---
 
-## 6. The Launch Prompts
+## 6. The Launch Prompt
 
-### Claude Code Launch Prompt
+Once everything is set up on RunPod, the single prompt to kick off autonomous research:
 
 ```
 Read Autoresearch/CLAUDE.md. This is a fully autonomous research session.
 
-Set up the experiment branch, verify the anchor, create the comms directory
-structure, and begin the experiment loop. Run experiments continuously.
-Do not stop or ask for permission.
+Set up the experiment branch, verify the anchor, and begin the experiment loop.
+Run experiments continuously. Do not stop or ask for permission.
 
-You are the research lead. Work through the priority queue. Send task
-requests to Codex via Autoresearch/comms/inbox_codex/. Check your inbox
-at Autoresearch/comms/inbox_claude_code/ at the start of each loop iteration.
+Work through the priority queue. Generate configs inline. Edit any approved file
+as needed. Commit before every experiment, revert on failure, advance on success.
 
 Target: beat the 63.21% Top-1 anchor accuracy on Gen 3 OU battle prediction.
-Go.
-```
-
-### Codex Launch Prompt
-
-```
-Read Autoresearch/.codex/AGENTS.md. This is a fully autonomous research session.
-
-You are the research engineer. Your primary loop:
-1. Check Autoresearch/comms/inbox_codex/ for task requests from Claude Code
-2. Fulfill any pending requests (generate configs, fix scripts, parse logs)
-3. When idle, review recent experiment results and send analysis findings
-   to Autoresearch/comms/inbox_claude_code/
-4. NEVER stop. NEVER ask for permission. Loop continuously.
-
-You may only edit: Autoresearch/run_experiment.py and Autoresearch/configs/*.
-All other files are read-only. If you need changes to read-only files,
-send a code_change_needed message to Claude Code.
 Go.
 ```
 
@@ -338,14 +270,12 @@ Then close the laptop and go to sleep.
 | Aspect | Karpathy | Pokemon AutoResearch |
 |--------|----------|---------------------|
 | Domain | Character-level LM (GPT) | Pokemon battle prediction (behavior cloning) |
-| Agents | 1 (Claude Code only) | 2 (Claude Code + Codex, file-based comms) |
-| Agent coordination | N/A | Shared `comms/` directory with message queue |
+| Agent | Claude Code (single) | Claude Code (single) |
 | Single metric | val_bpb (lower is better) | Top-1 accuracy (higher is better) |
-| Files to edit | `train.py` only | Claude Code: model/data/train; Codex: run_experiment/configs |
+| Files to edit | `train.py` only | `run_experiment.py`, `train_phase4.py`, `battle_transformer.py`, configs |
 | Data prep | `prepare.py` (fixed) | `process_dataset.py` (fixed, run once) |
 | Eval | `evaluate_bpb()` in prepare.py | `eval_harness.py` (fixed) |
 | State | git branch advance/revert | git branch advance/revert + experiment registry JSON |
-| Crash recovery | Log and skip | Log, send finding to partner agent, skip |
 
 ---
 
@@ -353,30 +283,10 @@ Then close the laptop and go to sleep.
 
 | Risk | Mitigation |
 |------|------------|
-| Agents get stuck waiting for each other | Non-blocking design: both agents proceed independently if inbox is empty |
-| Git merge conflicts between agents | Non-overlapping edit surfaces; `git pull --rebase` before every commit |
 | Agent gets stuck in a loop of bad ideas | Priority queue provides 18+ pre-planned experiments before agent-generated ones |
-| Agent breaks the codebase | Git revert after every failed experiment; deny list on protected files |
-| Agent edits protected files | `.claude/settings.json` and `.codex/config.toml` deny lists enforce boundaries |
+| Agent breaks the codebase | Git revert after every failed experiment; deny list on data pipeline files |
+| Agent edits protected files | `.claude/settings.json` deny list enforces boundaries |
 | RunPod pod terminated mid-run | Persistent volume preserves data; git commits preserve progress |
-| Agent runs out of context window | Registry + notes + comms provide persistent memory across context resets |
+| Agent runs out of context window | Registry + notes provide persistent memory across context resets |
 | Training OOM on large config | `run_experiment.py` catches OOM, logs crash, reverts |
-| Agent stops autonomously | "NEVER STOP" directive in both agents' instructions; no confirmation points in the loop |
-| Message queue grows unbounded | Processed messages moved to `completed/`; agents only read `pending` status |
-| One agent crashes permanently | The other continues independently — Claude Code can generate its own configs; Codex can still review and analyze |
-
----
-
-## 9. Graceful Degradation
-
-The dual-agent design is resilient because neither agent is strictly dependent on the other:
-
-| Scenario | What Happens |
-|----------|-------------|
-| Codex dies, Claude Code survives | Claude Code generates inline configs, runs full loop solo. Slightly slower but fully functional. |
-| Claude Code dies, Codex survives | Codex enters review-only mode: analyzes existing results, sends findings to inbox (read when Claude Code restarts). |
-| Both agents running | Optimal: Claude Code focuses on research decisions and code changes, Codex handles configs and log analysis. |
-| Communication directory missing | Both agents detect this and create it. No crash. |
-| Stale messages in inbox | Messages include timestamps. Agents ignore messages older than 1 hour. |
-
-This means the system is **at least as good as single-agent** and **better when both agents are active**.
+| Agent stops autonomously | "NEVER STOP" directive in CLAUDE.md; no confirmation points in the loop |
